@@ -2,11 +2,23 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_restful import Api, Resource
+# --- Mood model + routes ---
+from model.mood import db
+from api.mood_routes import MoodSubmit, MoodSummary
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins='*')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moods.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
 
 api = Api(app)
+api.add_resource(MoodSubmit, "/submit-mood")
+api.add_resource(MoodSummary, "/mood-summary")
+
 
 # --- Model class for InfoDb with CRUD naming ---
 class InfoModel:
