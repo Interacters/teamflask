@@ -9,6 +9,7 @@ from flask import current_app
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from api.jwt_authorize import token_required
+from api.media_api import media_api
 
 
 # import "objects" from "this" project
@@ -80,6 +81,7 @@ app.register_blueprint(feedback_api)
 app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
 # app.register_blueprint(announcement_api) ##temporary revert
+app.register_blueprint(media_api)
 
 # Jokes file initialization
 with app.app_context():
