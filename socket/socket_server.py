@@ -8,7 +8,8 @@ socketio = SocketIO(app, cors_allowed_origins=[
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://open-coding-society.github.io",
-    "https://pages.opencodingsociety.com",
+    "https://pages.opencodingsociety.com"
+    "https://interacters.github.io",
 ])
 
 
