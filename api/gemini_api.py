@@ -4,7 +4,7 @@ Gemini API for handling requests to the Gemini language model.
 Supports text analysis, citation checking, and other AI-powered features.
 
 Example frontend JavaScript code for reference:
-const API_KEY = "your-api-key-here";
+const API_KEY = "AIzaSyDfQX_armIpW1G3I1gEw8JLhRq4fpVgWK4";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 fetch(ENDPOINT, {
     method: "POST",
