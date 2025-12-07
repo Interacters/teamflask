@@ -85,46 +85,28 @@ class GeminiAPI:
             current_app.logger.info(f"User {current_user.uid} made a Gemini API request")
             
             try:
-                # Log the request details for debugging
-                current_app.logger.info(f"Making request to Gemini API: {endpoint}")
-                current_app.logger.debug(f"Payload: {payload}")
-                
                 # Make request to Gemini API
                 response = requests.post(
                     endpoint,
                     headers={'Content-Type': 'application/json'},
                     json=payload,
-                    timeout=90  # 90 second timeout
+                    timeout=90
                 )
                 
                 # Check if the request was successful
                 if response.status_code != 200:
-                    error_details = {
-                        'status_code': response.status_code,
-                        'response_text': response.text,
-                        'endpoint': endpoint,
-                        'headers': dict(response.headers)
-                    }
-                    current_app.logger.error(f"Gemini API error: {error_details}")
+                    current_app.logger.error(f"Gemini API error: {response.status_code}")
                     
-                    # Handle specific error codes
                     if response.status_code == 503:
                         return {
                             'message': 'Gemini API is temporarily unavailable (503). Please try again later.',
-                            'error_code': 503,
-                            'details': 'The service may be overloaded or under maintenance.'
+                            'error_code': 503
                         }, 503
                     elif response.status_code == 429:
                         return {
                             'message': 'Rate limit exceeded. Please try again later.',
                             'error_code': 429
                         }, 429
-                    elif response.status_code == 400:
-                        return {
-                            'message': 'Bad request to Gemini API. Please check your input.',
-                            'error_code': 400,
-                            'details': response.text
-                        }, 400
                     else:
                         return {
                             'message': f'Gemini API error: {response.status_code}',
@@ -158,6 +140,112 @@ class GeminiAPI:
                 current_app.logger.error(f"Unexpected error in Gemini API: {e}")
                 return {'message': f'Unexpected error: {str(e)}'}, 500
 
+    class _MediaBiasChat(Resource):
+        """
+        Specialized endpoint for media bias game assistance.
+        Provides information about news sources without revealing bias classifications.
+        Note: Does not require authentication to allow anonymous game play.
+        """
+        def post(self):
+            """
+            Handle media bias related queries.
+            
+            Expected JSON body:
+            {
+                "query": "User's question about a news source",
+                "type": "info" or "hint"
+            }
+            """
+            body = request.get_json()
+            
+            if not body or 'query' not in body:
+                return {'message': 'Query is required'}, 400
+            
+            query = body.get('query', '').strip()
+            query_type = body.get('type', 'info')
+            
+            # Get configuration
+            api_key = app.config.get('GEMINI_API_KEY')
+            server = app.config.get('GEMINI_SERVER')
+            
+            if not api_key or not server:
+                return {'message': 'Gemini API not configured'}, 500
+            
+            endpoint = f"{server}?key={api_key}"
+            
+            # Create appropriate prompt based on query type
+            if query_type == 'hint':
+                system_prompt = """You are helping students learn about media literacy by providing hints about news sources. 
+                
+IMPORTANT RULES:
+- Provide helpful hints about how to evaluate the source
+- Discuss ownership, funding model, audience, and editorial approach
+- DO NOT directly state whether the source is left-leaning, center, or right-leaning
+- Focus on objective facts that help students make their own assessment
+- Keep hints under 100 words
+- Be encouraging and educational
+
+Example good hint: "Consider who owns this organization and how they generate revenue. Think about whether they rely on subscriptions, advertising, or donations, and how that might influence their coverage choices."
+
+Example bad hint: "This source is left-leaning." (Too direct - don't do this!)"""
+                
+                prompt = f"{system_prompt}\n\nProvide a hint about: {query}"
+            else:
+                system_prompt = """You are an educational assistant helping students learn about news sources and media literacy.
+
+IMPORTANT RULES:
+- Provide factual, neutral information about news organizations
+- Include: ownership, founding date, headquarters, funding model, and focus areas
+- DO NOT classify sources as left/center/right biased
+- DO NOT reveal bias ratings or political leanings
+- Focus on verifiable facts that help students evaluate sources themselves
+- Keep responses under 150 words
+- Be neutral and educational
+
+Example good response: "Reuters is a global news agency founded in 1851, owned by Thomson Reuters Corporation. They operate as a wire service, selling news to other outlets worldwide. Their business model relies on providing accurate, fact-based reporting to maintain credibility with client news organizations."
+
+Example bad response: "Reuters is a center-biased source." (Don't classify bias!)"""
+                
+                prompt = f"{system_prompt}\n\nProvide information about: {query}"
+            
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }]
+            }
+            
+            try:
+                response = requests.post(
+                    endpoint,
+                    headers={'Content-Type': 'application/json'},
+                    json=payload,
+                    timeout=30
+                )
+                
+                if response.status_code != 200:
+                    return {
+                        'success': False,
+                        'message': f'API error: {response.status_code}'
+                    }, response.status_code
+                
+                result = response.json()
+                generated_text = result['candidates'][0]['content']['parts'][0]['text']
+                
+                return {
+                    'success': True,
+                    'response': generated_text,
+                    'type': query_type
+                }
+                
+            except Exception as e:
+                current_app.logger.error(f"Media bias chat error: {e}")
+                return {
+                    'success': False,
+                    'message': str(e)
+                }, 500
+
     class _Health(Resource):
         """
         Health check endpoint for Gemini API integration.
@@ -166,118 +254,19 @@ class GeminiAPI:
         def get(self):
             """
             Check if Gemini API is properly configured.
-            
-            Returns:
-                JSON response indicating configuration status
             """
             api_key = app.config.get('GEMINI_API_KEY')
             server = app.config.get('GEMINI_SERVER')
             
-            # Test the API endpoint if configured
             status_info = {
                 'gemini_configured': bool(api_key and server),
                 'server': server if server else 'Not configured',
                 'api_key_present': bool(api_key)
             }
             
-            if api_key and server:
-                try:
-                    # Make a simple test request to check API availability
-                    test_endpoint = f"{server}?key={api_key}"
-                    test_payload = {
-                        "contents": [{
-                            "parts": [{"text": "Hello"}]
-                        }]
-                    }
-                    
-                    response = requests.post(
-                        test_endpoint,
-                        headers={'Content-Type': 'application/json'},
-                        json=test_payload,
-                        timeout=10
-                    )
-                    
-                    status_info['api_test'] = {
-                        'status_code': response.status_code,
-                        'available': response.status_code == 200
-                    }
-                    
-                    if response.status_code != 200:
-                        status_info['api_test']['error'] = response.text
-                        
-                except Exception as e:
-                    status_info['api_test'] = {
-                        'available': False,
-                        'error': str(e)
-                    }
-            
             return status_info
-
-    class _Debug(Resource):
-        """
-        Debug endpoint to help troubleshoot Gemini API issues.
-        """
-        @token_required()
-        def post(self):
-            """
-            Debug the Gemini API request to identify 503 issues.
-            
-            Returns detailed information about the request and response.
-            """
-            current_user = g.current_user
-            body = request.get_json()
-            
-            # Get configuration
-            api_key = app.config.get('GEMINI_API_KEY')
-            server = app.config.get('GEMINI_SERVER')
-            
-            debug_info = {
-                'user': current_user.uid,
-                'config_check': {
-                    'api_key_present': bool(api_key),
-                    'api_key_length': len(api_key) if api_key else 0,
-                    'server': server,
-                    'server_valid': bool(server and server.startswith('https://'))
-                },
-                'request_body': body
-            }
-            
-            if not api_key or not server:
-                debug_info['error'] = 'Missing API configuration'
-                return debug_info, 500
-            
-            # Build the endpoint URL
-            endpoint = f"{server}?key={api_key}"
-            debug_info['endpoint'] = endpoint
-            
-            # Simple test payload
-            test_payload = {
-                "contents": [{
-                    "parts": [{"text": "Test"}]
-                }]
-            }
-            
-            try:
-                response = requests.post(
-                    endpoint,
-                    headers={'Content-Type': 'application/json'},
-                    json=test_payload,
-                    timeout=30
-                )
-                
-                debug_info['response'] = {
-                    'status_code': response.status_code,
-                    'headers': dict(response.headers),
-                    'content': response.text[:500] if response.text else None  # Limit content length
-                }
-                
-                return debug_info
-                
-            except Exception as e:
-                debug_info['exception'] = str(e)
-                return debug_info, 500
 
     # Register endpoints
     api.add_resource(_Ask, '/gemini')
+    api.add_resource(_MediaBiasChat, '/gemini/media-bias-chat')
     api.add_resource(_Health, '/gemini/health')
-    api.add_resource(_Debug, '/gemini/debug')

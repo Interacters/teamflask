@@ -38,11 +38,14 @@ cors = CORS(
        'http://localhost:4000',
        'http://127.0.0.1:4000',
        'https://open-coding-society.github.io',
-       'https://pages.opencodingsociety.com'
+       'https://pages.opencodingsociety.com',
        'https://interacters.github.io',
    ],
-   methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+   methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+   allow_headers=["Content-Type", "Authorization"],
+   expose_headers=["Content-Type"]
 )
+
 
 
 # Admin Defaults
