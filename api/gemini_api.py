@@ -31,7 +31,6 @@ class GeminiAPI:
         Gemini API Resource to handle requests to the Gemini language model.
         Supports various AI-powered text analysis tasks.
         """
-        @token_required()
         def post(self):
             """
             Send a request to the Gemini API.
