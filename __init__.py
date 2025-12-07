@@ -42,7 +42,7 @@ cors = CORS(
        'https://interacters.github.io',
    ],
    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-   allow_headers=["Content-Type", "Authorization"],
+   allow_headers=["Content-Type", "Authorization", "x-origin"],
    expose_headers=["Content-Type"]
 )
 
