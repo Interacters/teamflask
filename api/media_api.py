@@ -5,8 +5,16 @@ from __init__ import db
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
+# ...existing imports above...
+from flask_restful import Api, Resource
+from flask_cors import CORS
+# ...other imports...
+
 # Create Blueprint
 media_api = Blueprint('media_api', __name__, url_prefix='/api/media')
+# Allow cross-origin requests from your frontend during development:
+CORS(media_api, resources={r"/*": {"origins": "http://localhost:4600"}})
+
 api = Api(media_api)
 
 Base = declarative_base()
@@ -196,7 +204,56 @@ class MediaLeaderboardAPI(Resource):
             leaderboard.append(entry)
         
         return leaderboard, 200
+    
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+from flask import make_response
 
+@media_api.route('/fetch_meta')
+def fetch_meta():
+    target = request.args.get('url')
+    if not target:
+        return jsonify({'error': 'missing url'}), 400
+
+    try:
+        headers = {'User-Agent': 'metadata-fetcher/1.0'}
+        r = requests.get(target, headers=headers, timeout=12)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+
+        def meta_content(name=None, prop=None):
+            if name:
+                tag = soup.find('meta', attrs={'name': name})
+                if tag and tag.get('content'):
+                    return tag['content'].strip()
+            if prop:
+                tag = soup.find('meta', attrs={'property': prop})
+                if tag and tag.get('content'):
+                    return tag['content'].strip()
+            return None
+
+        title = meta_content(None, 'og:title') or (soup.title.string.strip() if soup.title else None) or meta_content('twitter:title')
+        author = meta_content('author') or meta_content(None, 'article:author') or meta_content('byline')
+        published = meta_content(None, 'article:published_time') or meta_content('date') or meta_content('pubdate') or meta_content(None, 'og:updated_time')
+        site = meta_content(None, 'og:site_name') or (urlparse(target).hostname.replace('www.', ''))
+        canon = soup.find('link', rel='canonical')
+        canon_url = urljoin(target, canon['href']) if canon and canon.get('href') else target
+
+        result = {
+            'title': title,
+            'author': author,
+            'published': published,
+            'site': site,
+            'url': canon_url
+        }
+
+        resp = make_response(jsonify(result), 200)
+        resp.headers['Access-Control-Allow-Origin'] = '*'  # or set to your frontend origin
+        return resp
+
+    except Exception as e:
+        return jsonify({'error': 'fetch_failed', 'detail': str(e)}), 502
 
 # Register endpoints
 api.add_resource(MediaPersonAPI, '/person/get')  # POST to register, GET with ?name=X to retrieve
