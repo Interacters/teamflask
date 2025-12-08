@@ -20,19 +20,32 @@ app = Flask(__name__)
 # Enhanced CORS configuration
 CORS(app, 
      resources={r"/*": {
-         "origins": "*",
+         "origins": ["http://localhost:4600", "http://127.0.0.1:4600"],
          "methods": ["GET", "POST", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"],
          "expose_headers": ["Content-Type"],
-         "supports_credentials": False
+         "supports_credentials": True
      }})
 
-# Add after_request to ensure CORS headers are always present
+# Add explicit preflight handling
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', '*')
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        return response
+
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    origin = request.headers.get('Origin')
+    if origin in ['http://localhost:4600', 'http://127.0.0.1:4600']:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///moods.db'
@@ -97,61 +110,6 @@ class DataAPI(Resource):
 
 api.add_resource(DataAPI, '/api/data')
 
-# --- Chat endpoint with proper CORS handling ---
-@app.route('/api/chat', methods=['POST', 'OPTIONS'])
-def chat_endpoint():
-    # Handle OPTIONS preflight request
-    if request.method == 'OPTIONS':
-        return '', 200
-    
-    try:
-        data = request.get_json()
-        
-        # Validate input
-        if not data or 'message' not in data or 'type' not in data:
-            return jsonify({"error": "Missing required fields: type and message"}), 400
-        
-        message = data['message']
-        msg_type = data['type']
-        
-        print(f"Received {msg_type} request: {message}")
-        
-        # Check if API key is configured
-        if not GEMINI_API_KEY:
-            return jsonify({
-                "error": "Gemini API key not configured",
-                "details": "Please set GEMINI_API_KEY environment variable"
-            }), 500
-        
-        # Prepare prompt based on type
-        if msg_type == 'hint':
-            prompt = f"Provide a helpful hint (not the full answer) for this question: {message}"
-        else:
-            prompt = f"Provide detailed information about: {message}"
-        
-        # Call Gemini API with Gemini 1.5 Flash (higher free tier limits)
-        model = genai.GenerativeModel('gemini-2.5-flash-lite')
-        response = model.generate_content(prompt)
-        
-        # Extract the text from response
-        ai_response = response.text
-        
-        # Send response back to frontend
-        return jsonify({
-            "success": True,
-            "type": msg_type,
-            "question": message,
-            "answer": ai_response
-        }), 200
-        
-    except Exception as e:
-        print(f"Error in chat endpoint: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "error": "Internal server error",
-            "details": str(e)
-        }), 500
 
 # We can use @app.route for HTML endpoints, this will be style for Admin UI
 @app.route('/')

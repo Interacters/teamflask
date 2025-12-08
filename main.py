@@ -45,6 +45,7 @@ from model.classroom import Classroom
 from model.post import Post, init_posts
 from model.microblog import MicroBlog, Topic, init_microblogs
 from hacks.jokes import initJokes 
+from api.chat_api import chat_api
 # from model.announcement import Announcement ##temporary revert
 
 # server only Views
@@ -82,6 +83,7 @@ app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
 # app.register_blueprint(announcement_api) ##temporary revert
 app.register_blueprint(media_api)
+app.register_blueprint(chat_api)
 
 # Jokes file initialization
 with app.app_context():
