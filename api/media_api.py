@@ -169,8 +169,24 @@ class MediaLeaderboardAPI(Resource):
         """Get top scores sorted by time (ascending - fastest times first)"""
         limit = request.args.get('limit', 50, type=int)
         
-        # Get all scores sorted by time (ascending)
-        scores = MediaScore.query.order_by(MediaScore.time.asc()).limit(limit).all()
+        # Get best (minimum) time for each username using subquery
+        from sqlalchemy import func
+        
+        # Subquery to find minimum time per username
+        subquery = db.session.query(
+            MediaScore.username,
+            func.min(MediaScore.time).label('best_time')
+        ).group_by(MediaScore.username).subquery()
+        
+        # Join to get the full record with the best time
+        # This gets the earliest entry with the best time for each user
+        scores = db.session.query(MediaScore).join(
+            subquery,
+            db.and_(
+                MediaScore.username == subquery.c.username,
+                MediaScore.time == subquery.c.best_time
+            )
+        ).order_by(MediaScore.time.asc()).limit(limit).all()
         
         # Format as leaderboard with ranks
         leaderboard = []
