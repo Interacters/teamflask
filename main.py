@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from api.jwt_authorize import token_required
 from api.media_api import media_api
+from api.performance_api import performance_api
 
 
 # import "objects" from "this" project
@@ -73,6 +74,7 @@ app.register_blueprint(stock_api)
 app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
 app.register_blueprint(microblog_api)
+app.register_blueprint(performance_api)
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)

@@ -3,6 +3,7 @@ from flask_login import LoginManager
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+#from model.performance import Performance
 from dotenv import load_dotenv
 import os
 
