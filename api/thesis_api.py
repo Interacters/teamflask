@@ -69,7 +69,7 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include any markdown fo
 }}"""
 
             # Call Gemini API
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(prompt)
             
             if not response or not response.text:

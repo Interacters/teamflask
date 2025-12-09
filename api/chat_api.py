@@ -32,7 +32,19 @@ class ChatAPI(Resource):
             
             # Prepare prompt based on type
             if msg_type == 'hint':
-                prompt = f"Provide a helpful hint (not the full answer) for this question: {message}"
+                prompt = f"""Provide a helpful hint (not the full answer) for this question: {message}. You are helping students learn about media literacy by providing hints about news sources. 
+                
+IMPORTANT RULES:
+- Provide helpful hints about how to evaluate the source
+- Discuss ownership, funding model, audience, and editorial approach
+- DO NOT directly state whether the source is left-leaning, center, or right-leaning
+- Focus on objective facts that help students make their own assessment
+- Keep hints under 100 words
+- Be encouraging and educational
+
+Example good hint: "Consider who owns this organization and how they generate revenue. Think about whether they rely on subscriptions, advertising, or donations, and how that might influence their coverage choices."
+
+Example bad hint: "This source is left-leaning." (Too direct - don't do this!)"""
             else:
                 prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 150 characters"
             You are an educational assistant helping students learn about news sources and media literacy.
