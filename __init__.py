@@ -44,10 +44,17 @@ cors = CORS(
        'https://interacters.github.io',
    ],
    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-   allow_headers=["Content-Type", "Authorization", "x-origin"],
-   expose_headers=["Content-Type"]
+   allow_headers=[
+       "Content-Type", 
+       "Authorization", 
+       "x-origin",
+       "Accept",
+       "Origin",
+       "X-Requested-With"
+   ],
+   expose_headers=["Content-Type", "Set-Cookie"],
+   max_age=3600  # Cache preflight for 1 hour
 )
-
 
 
 # Admin Defaults
@@ -140,7 +147,7 @@ app.config['GROQ_API_KEY'] = os.environ.get('GROQ_API_KEY')
 def after_request(response):
     """Add CORS headers to every response"""
     origin = request.headers.get('Origin')
-    if origin in [
+    allowed_origins = [
         'http://localhost:4500',
         'http://127.0.0.1:4500',
         'http://localhost:4600',
@@ -150,10 +157,14 @@ def after_request(response):
         'https://open-coding-society.github.io',
         'https://pages.opencodingsociety.com',
         'https://interacters.github.io',
-    ]:
+    ]
+    
+    if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, x-origin'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, x-origin, Accept, Origin, X-Requested-With'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Set-Cookie'
         response.headers['Access-Control-Max-Age'] = '3600'
+    
     return response

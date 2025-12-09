@@ -4,6 +4,8 @@ from datetime import datetime
 from __init__ import db
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
+from api.jwt_authorize import token_required
+from flask import g
 
 # ...existing imports above...
 from flask_restful import Api, Resource
@@ -79,88 +81,41 @@ class MediaPerson(db.Model):
         }
 
 
-class MediaPersonAPI(Resource):
-    """Simple name registration without authentication"""
-    
-    def post(self):
-        """Register a person with just their name"""
-        body = request.get_json()
-        
-        if not body:
-            return {'message': 'Request body is required'}, 400
-        
-        name = body.get('name')
-        if not name or len(name.strip()) < 2:
-            return {'message': 'Name is required and must be at least 2 characters'}, 400
-        
-        name = name.strip()
-        
-        # Check if person already exists
-        existing_person = MediaPerson.query.filter_by(name=name).first()
-        if existing_person:
-            return existing_person.read(), 200
-        
-        # Create new person
-        person = MediaPerson(name=name)
-        created_person = person.create()
-        
-        if not created_person:
-            return {'message': 'Failed to register name'}, 500
-        
-        return created_person.read(), 201
-    
-    def get(self):
-        """Get person by name (query parameter)"""
-        name = request.args.get('name')
-        
-        if not name:
-            return {'message': 'Name parameter is required'}, 400
-        
-        person = MediaPerson.query.filter_by(name=name).first()
-        
-        if not person:
-            return {'message': 'Person not found'}, 404
-        
-        return person.read(), 200
-
-
 class MediaScoreAPI(Resource):
     """Submit and retrieve media bias game scores"""
     
+    @token_required()  # ⭐ ADD THIS DECORATOR
     def post(self, username=None, time=None):
         """
-        Submit a score. Supports two formats:
-        1. JSON body: {"user": "username", "time": 123}
-        2. Path parameters: /api/media/score/username/123
+        Submit a score - REQUIRES AUTHENTICATION
+        The username comes from the authenticated JWT token, not the client
         """
-        # Try to get data from path parameters first
-        if username and time:
-            try:
-                time = int(time)
-            except ValueError:
-                return {'message': 'Time must be an integer'}, 400
-        else:
-            # Try to get data from JSON body
-            body = request.get_json()
-            
-            if not body:
-                return {'message': 'Request body is required or use path parameters'}, 400
-            
-            username = body.get('user') or body.get('username')
-            time = body.get('time')
-            
-            if not username:
-                return {'message': 'Username is required'}, 400
-            
-            if not time:
-                return {'message': 'Time is required'}, 400
-            
-            try:
-                time = int(time)
-            except (ValueError, TypeError):
-                return {'message': 'Time must be an integer (seconds)'}, 400
+        # Get the authenticated user from the JWT token
+        current_user = g.current_user
         
-        # Create score entry
+        # Use the authenticated user's username (ignore any client-provided username)
+        username = current_user.uid
+        
+        # Get time from path parameters or JSON body
+        if not time:
+            body = request.get_json()
+            if body:
+                time = body.get('time')
+        
+        if not time:
+            return {'message': 'Time is required'}, 400
+        
+        # Validate time is an integer
+        try:
+            time = int(time)
+        except (ValueError, TypeError):
+            return {'message': 'Time must be an integer (seconds)'}, 400
+        
+        # Validate time is reasonable (e.g., between 1 second and 1 hour)
+        if time < 1 or time > 3600:
+            return {'message': 'Time must be between 1 and 3600 seconds'}, 400
+        
+        # Create score entry with the AUTHENTICATED username
         score = MediaScore(username=username, time=time)
         created_score = score.create()
         
@@ -272,8 +227,7 @@ def fetch_meta():
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
 
-# Register endpoints
-api.add_resource(MediaPersonAPI, '/person/get')  # POST to register, GET with ?name=X to retrieve
+# Register endpoints # POST to register, GET with ?name=X to retrieve
 api.add_resource(MediaScoreAPI, 
                  '/score',  # POST with JSON body
                  '/score/<string:username>/<int:time>')  # POST with path params

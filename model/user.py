@@ -617,77 +617,59 @@ class User(db.Model, UserMixin):
 
 # Builds working data set for testing
 def initUsers():
+    """Initialize default users for testing and development"""
+    from __init__ import app, db
+    
     with app.app_context():
-        """Create database and tables"""
-        db.create_all()
-        """Tester data for table"""
-        
-        default_grade_data = {
-            'grade': 'A',
-            'attendance': 5,
-            'work_habits': 5,
-            'behavior': 5,
-            'timeliness': 5,
-            'tech_sense': 4,
-            'tech_talk': 4,
-            'tech_growth': 4,
-            'advocacy': 4,
-            'communication_collaboration': 5,
-            'integrity': 5,
-            'organization': 5
-        }
-
-        default_ap_exam = {
-            'predicted_score': {
-                'practice_based': {
-                    'mcq_2018': 0,
-                    'mcq_2020': 0,
-                    'mcq_2021': 0,
-                    'practice_frq': 0,
-                    'predicted_ap_score': 0,
-                    'confidence_level': 'Low'
-                },
-                'manual_calculator': {
-                    'mcq_score': 60,
-                    'frq_score': 6,
-                    'composite_score': 90,
-                    'predicted_ap_score': 5
-                }
+        # Define test users
+        test_users = [
+            {
+                'name': 'Test Student 1',
+                'uid': 'student1',
+                'password': 'pass123',
+                'role': 'User'
             },
-            'last_updated': None
-        }
-
-        u1 = User(name=app.config['ADMIN_USER'], uid=app.config['ADMIN_UID'], password=app.config['ADMIN_PASSWORD'], pfp=app.config['ADMIN_PFP'], kasm_server_needed=True, role="Admin")
-        u2 = User(name=app.config['DEFAULT_USER'], uid=app.config['DEFAULT_UID'], password=app.config['DEFAULT_USER_PASSWORD'], pfp=app.config['DEFAULT_USER_PFP'])
-        u3 = User(name='Nicholas Tesla', uid='niko', pfp='niko.png', role='Teacher', password=app.config['DEFAULT_USER_PASSWORD'])
-
-
-        users = [u1, u2, u3]
+            {
+                'name': 'Test Student 2',
+                'uid': 'student2',
+                'password': 'pass123',
+                'role': 'User'
+            },
+            {
+                'name': 'Test Student 3',
+                'uid': 'student3',
+                'password': 'pass123',
+                'role': 'User'
+            },
+            {
+                'name': 'Teacher Account',
+                'uid': 'teacher',
+                'password': 'teacher123',
+                'role': 'Admin'
+            }
+        ]
         
-        for user in users:
+        print("\n=== Creating Test Users ===")
+        for user_data in test_users:
             try:
-                user.create()
-            except IntegrityError:
-                '''fails with bad or duplicate data'''
-                db.session.remove()
-                print(f"Records exist, duplicate email, or error: {user.uid}")
-
-        s1 = Section(name='Computer Science A', abbreviation='CSA')
-        s2 = Section(name='Computer Science Principles', abbreviation='CSP')
-        s3 = Section(name='Engineering Robotics', abbreviation='Robotics')
-        s4 = Section(name='Computer Science and Software Engineering', abbreviation='CSSE')
-        sections = [s1, s2, s3, s4]
+                # Check if user already exists
+                existing = User.query.filter_by(_uid=user_data['uid']).first()
+                
+                if existing:
+                    print(f"⚠️  User '{user_data['uid']}' already exists - skipping")
+                else:
+                    # Create new user
+                    user = User(
+                        name=user_data['name'],
+                        uid=user_data['uid'],
+                        password=user_data['password'],
+                        role=user_data['role']
+                    )
+                    user.create()
+                    print(f"✅ Created user: {user_data['uid']} (password: {user_data['password']})")
+                    
+            except Exception as e:
+                print(f"❌ Error creating user '{user_data['uid']}': {e}")
+                db.session.rollback()
         
-        for section in sections:
-            try:
-                section.create()    
-            except IntegrityError:
-                '''fails with bad or duplicate data'''
-                db.session.remove()
-                print(f"Records exist, duplicate email, or error: {section.name}")
-            
-        u1.add_section(s1)
-        u1.add_section(s2)
-        u2.add_section(s2)
-        u2.add_section(s3)
-        u3.add_section(s4)
+        print("=== User Creation Complete ===\n")
