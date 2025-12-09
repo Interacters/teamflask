@@ -37,6 +37,7 @@ from model.user import User, initUsers
 from model.user import Section;
 from model.github import GitHubUser
 from model.feedback import Feedback
+from model.performance import Performance
 from api.analytics import get_date_range
 # from api.grade_api import grade_api
 from api.study import study_api
@@ -323,6 +324,10 @@ def generate_data():
 app.cli.add_command(custom_cli)
         
 # this runs the flask application on the development server
+with app.app_context():
+    db.create_all()
+    print("✅ Database tables created!")
+
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = app.config['FLASK_PORT']

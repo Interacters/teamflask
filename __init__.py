@@ -1,4 +1,5 @@
 from flask import Flask
+from flask import Flask, request
 from flask_login import LoginManager
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -135,3 +136,24 @@ app.config['KASM_API_KEY_SECRET'] = os.environ.get('KASM_API_KEY_SECRET') or Non
 #GROQ settings
 app.config['GROQ_API_KEY'] = os.environ.get('GROQ_API_KEY')
 
+@app.after_request
+def after_request(response):
+    """Add CORS headers to every response"""
+    origin = request.headers.get('Origin')
+    if origin in [
+        'http://localhost:4500',
+        'http://127.0.0.1:4500',
+        'http://localhost:4600',
+        'http://127.0.0.1:4600',
+        'http://localhost:4000',
+        'http://127.0.0.1:4000',
+        'https://open-coding-society.github.io',
+        'https://pages.opencodingsociety.com',
+        'https://interacters.github.io',
+    ]:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, x-origin'
+        response.headers['Access-Control-Max-Age'] = '3600'
+    return response
