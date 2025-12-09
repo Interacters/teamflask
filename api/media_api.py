@@ -216,11 +216,8 @@ def fetch_meta():
     if not target:
         return jsonify({'error': 'missing url'}), 400
 
-    try:
-        headers = {'User-Agent': 'metadata-fetcher/1.0'}
-        r = requests.get(target, headers=headers, timeout=12)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, 'html.parser')
+    def parse_html(html_text, target_url):
+        soup = BeautifulSoup(html_text, 'html.parser')
 
         def meta_content(name=None, prop=None):
             if name:
@@ -236,11 +233,11 @@ def fetch_meta():
         title = meta_content(None, 'og:title') or (soup.title.string.strip() if soup.title else None) or meta_content('twitter:title')
         author = meta_content('author') or meta_content(None, 'article:author') or meta_content('byline')
         published = meta_content(None, 'article:published_time') or meta_content('date') or meta_content('pubdate') or meta_content(None, 'og:updated_time')
-        site = meta_content(None, 'og:site_name') or (urlparse(target).hostname.replace('www.', ''))
+        site = meta_content(None, 'og:site_name') or (urlparse(target_url).hostname.replace('www.', ''))
         canon = soup.find('link', rel='canonical')
-        canon_url = urljoin(target, canon['href']) if canon and canon.get('href') else target
+        canon_url = urljoin(target_url, canon['href']) if canon and canon.get('href') else target_url
 
-        result = {
+        return {
             'title': title,
             'author': author,
             'published': published,
@@ -248,12 +245,32 @@ def fetch_meta():
             'url': canon_url
         }
 
-        resp = make_response(jsonify(result), 200)
-        resp.headers['Access-Control-Allow-Origin'] = '*'  # or set to your frontend origin
-        return resp
+    try:
+        # Try direct fetch first
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                                 'AppleWebKit/537.36 (KHTML, like Gecko) '
+                                 'Chrome/120.0.0.0 Safari/537.36'}
+        r = requests.get(target, headers=headers, timeout=12)
+        r.raise_for_status()
+        result = parse_html(r.text, target)
 
-    except Exception as e:
-        return jsonify({'error': 'fetch_failed', 'detail': str(e)}), 502
+    except requests.exceptions.RequestException:
+        # Fallback to AllOrigins (encode URL safely)
+        try:
+            from urllib.parse import quote_plus
+            encoded_url = quote_plus(target)
+            allorigins_url = f"https://api.allorigins.win/get?url={encoded_url}"
+            r = requests.get(allorigins_url, timeout=12)
+            r.raise_for_status()
+            data = r.json()
+            html_text = data.get('contents', '')
+            result = parse_html(html_text, target)
+        except Exception as e:
+            return jsonify({'error': 'fetch_failed', 'detail': str(e)}), 502
+
+    resp = make_response(jsonify(result), 200)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 # Register endpoints
 api.add_resource(MediaPersonAPI, '/person/get')  # POST to register, GET with ?name=X to retrieve
@@ -263,3 +280,6 @@ api.add_resource(MediaScoreAPI,
 api.add_resource(MediaLeaderboardAPI, 
                  '/leaderboard',  # New dedicated leaderboard endpoint
                  '/')  # Also accessible at /api/media/ for backward compatibility
+
+# Register the media_api blueprint with the main Flask app
+from __init__ import app  # Make sure you have the app object imported
