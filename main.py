@@ -10,7 +10,8 @@ from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from api.jwt_authorize import token_required
 from api.media_api import media_api
-from api.performance_api import performance_api
+from hacks.performance import performance_api
+from hacks.performances import initPerformances
 
 
 # import "objects" from "this" project
@@ -37,7 +38,6 @@ from model.user import User, initUsers
 from model.user import Section;
 from model.github import GitHubUser
 from model.feedback import Feedback
-from model.performance import Performance
 from api.analytics import get_date_range
 # from api.grade_api import grade_api
 from api.study import study_api
@@ -93,7 +93,10 @@ app.register_blueprint(thesis_api)
 # Jokes file initialization
 with app.app_context():
     initJokes()
-
+# Performances file initialization
+with app.app_context():
+    initJokes()
+    initPerformances()  # Add this line
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
 
