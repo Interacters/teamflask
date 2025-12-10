@@ -7,8 +7,7 @@ from api.jwt_authorize import token_required
 from model.user import User
 from model.github import GitHubUser
 
-user_api = Blueprint('user_api', __name__,
-                   url_prefix='/api')
+user_api = Blueprint('user_api', __name__, url_prefix='/api/users')
 
 # API docs https://flask-restful.readthedocs.io/en/latest/api.html
 api = Api(user_api)

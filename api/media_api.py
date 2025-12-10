@@ -81,6 +81,7 @@ class MediaPerson(db.Model):
         }
 
 
+
 class MediaScoreAPI(Resource):
     """Submit and retrieve media bias game scores"""
     
@@ -227,7 +228,8 @@ def fetch_meta():
     resp.headers['Access-Control-Allow-Origin'] = '*'
     return resp
 
-# Register endpoints # POST to register, GET with ?name=X to retrieve
+# Register endpoints
+api.add_resource(MediaPersonAPI, '/person/get')  # POST to register, GET with ?name=X to retrieve
 api.add_resource(MediaScoreAPI, 
                  '/score',  # POST with JSON body
                  '/score/<string:username>/<int:time>')  # POST with path params
