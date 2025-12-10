@@ -37,7 +37,7 @@ class ThesisGeneratorAPI(Resource):
             genai.configure(api_key=api_key)
             
             # Build the prompt
-            prompt = f"""Generate 3 high-quality thesis statements for an essay with the following details:
+            prompt = f"""Generate 3 high-quality, human sounding, thesis statements for an essay with the following details:
 
 Topic: {topic}
 Position/Argument: {position}
@@ -46,7 +46,7 @@ Thesis Type: {thesis_type}
 {f"Target Audience: {audience}" if audience else ''}
 
 For each thesis statement, provide:
-1. The thesis statement itself
+1. The human-like thesis statement itself
 2. A strength rating (1-10)
 3. A brief explanation of why it's strong or weak
 4. 2-3 supporting arguments that could be used
