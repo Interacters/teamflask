@@ -2,12 +2,13 @@ import jwt
 from flask import Blueprint, app, request, jsonify, current_app, Response, g
 from flask_restful import Api, Resource # used for REST API building
 from datetime import datetime
-from __init__ import app
+from __init__ import app, db
 from api.jwt_authorize import token_required
 from model.user import User
 from model.github import GitHubUser
 
-user_api = Blueprint('user_api', __name__, url_prefix='/api/users')
+user_api = Blueprint('user_api', __name__,
+                   url_prefix='/api')
 
 # API docs https://flask-restful.readthedocs.io/en/latest/api.html
 api = Api(user_api)
@@ -120,6 +121,10 @@ class UserAPI:
                 cleaned_body['school'] = body.get('school')
             if body.get('kasm_server_needed') is not None:
                 cleaned_body['kasm_server_needed'] = body.get('kasm_server_needed')
+            # Support assigning classes (e.g. ["CSSE","CSP","CSA"]).
+            # Accept either a list or a single string.
+            if body.get('class') is not None:
+                cleaned_body['class'] = body.get('class')
             
             # Remove None values
             cleaned_body = {k: v for k, v in cleaned_body.items() if v is not None}
@@ -318,7 +323,6 @@ class UserAPI:
                 return {'message': f'1 or more sections failed to delete, current {sections} requested {current_user.read_sections()}'}, 404
     
             return {'message': f'Sections {sections} deleted successfully'}, 200
-        
     class _Security(Resource):
         def post(self):
             try:
@@ -362,7 +366,8 @@ class UserAPI:
                             "user": {
                                 "uid": user._uid,
                                 "name": user.name,
-                                "role": user.role
+                                "role": user.role,
+                                "class": user._class if getattr(user, '_class', None) is not None else []
                             }
                         }
                         resp = jsonify(response_data)
@@ -657,6 +662,8 @@ class UserAPI:
                 'school': school,
                 'kasm_server_needed': False
             }
+            if body.get('class') is not None:
+                cleaned_body['class'] = body.get('class')
 
             # Create the guest user (skip GitHub validation)
             try:
@@ -686,3 +693,93 @@ class UserAPI:
     api.add_resource(_GradeData, '/grade_data')
     api.add_resource(_APExam, '/apexam')
     api.add_resource(_School, '/school')
+    
+    class _Class(Resource):
+        """Manage the user's `class` list (e.g. CSSE, CSP, CSA).
+        GET: return classes
+        POST: add or remove classes (use 'action' parameter: 'add', 'remove', or 'clear')
+        PUT: replace classes
+        """
+
+        @token_required()
+        def get(self):
+            current_user = g.current_user
+            uid = request.args.get('uid')
+            if current_user.role == 'Admin' and uid:
+                user = User.query.filter_by(_uid=uid).first()
+                if not user:
+                    return {'message': f'User {uid} not found'}, 404
+            else:
+                user = current_user
+
+            return jsonify({'uid': user.uid, 'class': user._class if getattr(user, '_class', None) is not None else []})
+
+        @token_required()
+        def post(self):
+            """Add, remove, or clear classes from the user's class list based on action parameter."""
+            current_user = g.current_user
+            body = request.get_json() or {}
+            uid = body.get('uid')
+            if current_user.role == 'Admin' and uid:
+                user = User.query.filter_by(_uid=uid).first()
+                if not user:
+                    return {'message': f'User {uid} not found'}, 404
+            else:
+                user = current_user
+
+            action = body.get('action', 'add')  # Default to 'add' for backward compatibility
+            
+            if action == 'clear':
+                # Clear all classes
+                user.update({'class': []})
+                return {'message': f'Cleared classes for {user.uid}'}, 200
+            
+            classes = body.get('class') or body.get('classes')
+            if not classes:
+                return {'message': f'No classes provided to {action}'}, 400
+
+            if isinstance(classes, str):
+                classes = [classes]
+
+            existing = user._class if getattr(user, '_class', None) is not None else []
+            
+            if action == 'add':
+                # Add classes (merge without duplicates)
+                new_list = existing + [c for c in classes if c not in existing]
+                user.update({'class': new_list})
+                return jsonify({'uid': user.uid, 'class': user._class})
+            
+            elif action == 'remove':
+                # Remove specified classes
+                remaining = [c for c in existing if c not in classes]
+                user.update({'class': remaining})
+                return jsonify({'uid': user.uid, 'class': user._class})
+            
+            else:
+                return {'message': f'Invalid action: {action}. Use "add", "remove", or "clear"'}, 400
+
+        @token_required()
+        def put(self):
+            """Replace the user's class list with the provided list."""
+            current_user = g.current_user
+            body = request.get_json() or {}
+            uid = body.get('uid')
+            if current_user.role == 'Admin' and uid:
+                user = User.query.filter_by(_uid=uid).first()
+                if not user:
+                    return {'message': f'User {uid} not found'}, 404
+            else:
+                user = current_user
+
+            classes = body.get('class') or body.get('classes')
+            if classes is None:
+                return {'message': 'class list is required for PUT'}, 400
+            if isinstance(classes, str):
+                classes = [classes]
+
+            user.update({'class': classes})
+            return jsonify({'uid': user.uid, 'class': user._class})
+
+
+
+    api.add_resource(_Class, '/user/class')
