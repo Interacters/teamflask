@@ -52,7 +52,7 @@ Thesis Type: {thesis_type}
 {f"Target Audience: {audience}" if audience else ''}
 
 For each thesis statement, provide:
-1. The human-like thesis statement itself
+1. The human-like thesis statement itself, but avoid using very complex language
 2. A strength rating (1-10)
 3. A brief explanation of why it's strong or weak
 4. 2-3 supporting arguments that could be used
