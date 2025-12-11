@@ -4,6 +4,7 @@ import google.generativeai as genai
 from __init__ import app
 import os
 
+# Create blueprint - let main app handle CORS
 chat_api = Blueprint('chat_api', __name__, url_prefix='/api')
 api = Api(chat_api)
 
@@ -13,6 +14,11 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 class ChatAPI(Resource):
+    def options(self):
+        """Handle OPTIONS preflight for CORS"""
+        # Return empty response, headers will be added by main app
+        return {}, 200
+    
     def post(self):
         """Handle chat requests with Gemini API"""
         try:
@@ -46,8 +52,8 @@ Example good hint: "Consider who owns this organization and how they generate re
 
 Example bad hint: "This source is left-leaning." (Too direct - don't do this!)"""
             else:
-                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 150 characters"
-            You are an educational assistant helping students learn about news sources and media literacy.
+                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 150 characters.
+You are an educational assistant helping students learn about news sources and media literacy.
 
 IMPORTANT RULES:
 - Provide factual, neutral information about news organizations
@@ -62,6 +68,7 @@ IMPORTANT RULES:
 Example good response: "Reuters is a global news agency founded in 1851, owned by Thomson Reuters Corporation. They operate as a wire service, selling news to other outlets worldwide. Their business model relies on providing accurate, fact-based reporting to maintain credibility with client news organizations."
 
 Example bad response: "Reuters is a center-biased source." (Don't classify bias!)"""
+            
             # Call Gemini API
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(prompt)
@@ -79,4 +86,5 @@ Example bad response: "Reuters is a center-biased source." (Don't classify bias!
                 "details": str(e)
             }, 500
 
+# Register the resource
 api.add_resource(ChatAPI, '/chat')

@@ -5,10 +5,16 @@ from __init__ import app
 import json
 import re
 
+# Create blueprint - let main app handle CORS
 thesis_api = Blueprint('thesis_api', __name__, url_prefix='/api')
 api = Api(thesis_api)
 
 class ThesisGeneratorAPI(Resource):
+    def options(self):
+        """Handle OPTIONS preflight for CORS"""
+        # Return empty response, headers will be added by main app
+        return {}, 200
+    
     def post(self):
         """Generate thesis statements using Gemini API"""
         try:
@@ -108,6 +114,10 @@ IMPORTANT: Respond ONLY with a valid JSON object. Do not include any markdown fo
             return {'error': 'Internal server error', 'details': str(e)}, 500
 
 class ThesisHealthAPI(Resource):
+    def options(self):
+        """Handle OPTIONS preflight for CORS"""
+        return {}, 200
+    
     def get(self):
         """Check if Gemini API is configured"""
         api_key = app.config.get('GEMINI_API_KEY')
