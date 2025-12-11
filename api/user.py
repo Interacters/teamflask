@@ -91,10 +91,11 @@ class UserAPI:
                 return {'message': f'User ID is missing, or is less than 2 characters'}, 400
           
             # check if uid is a GitHub account
-            _, status = GitHubUser().get(uid)
+            print(f"🔍 Checking GitHub for user: {uid}")
+            result, status = GitHubUser().get(uid)
+            print(f"📊 GitHub API returned: status={status}, result={result}")
             if status != 200:
                 return {'message': f'User ID {uid} not a valid GitHub account' }, 404
-            
             ''' User object creation '''
             #1: Setup minimal User object using __init__ method
             password = body.get('password')

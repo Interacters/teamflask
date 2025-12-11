@@ -52,7 +52,7 @@ Example good hint: "Consider who owns this organization and how they generate re
 
 Example bad hint: "This source is left-leaning." (Too direct - don't do this!)"""
             else:
-                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 150 characters.
+                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 200 characters.
 You are an educational assistant helping students learn about news sources and media literacy.
 
 IMPORTANT RULES:
@@ -61,7 +61,7 @@ IMPORTANT RULES:
 - DO NOT classify sources as left/center/right biased
 - DO NOT reveal bias ratings or political leanings
 - Focus on verifiable facts that help students evaluate sources themselves
-- Keep responses under 150 words
+- Keep responses under 200 words
 - Be neutral and educational
 - Provide information on well-known shows hosted by the organization if relevant and asked
 
