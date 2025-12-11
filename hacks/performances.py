@@ -1,6 +1,7 @@
 import json
 import os
 import fcntl
+from datetime import datetime
 from flask import current_app
 
 def get_performances_file():
@@ -33,6 +34,7 @@ def _write_performances_file(data):
 def initPerformances():
     """Initialize performances file if it doesn't exist"""
     PERFORMANCES_FILE = get_performances_file()
+    # Only initialize if file does not exist
     if os.path.exists(PERFORMANCES_FILE):
         return
     # Start with empty list
@@ -45,9 +47,8 @@ def getPerformances():
 def getPerformance(id):
     """Get a specific performance rating by id"""
     performances = _read_performances_file()
-    for perf in performances:
-        if perf['id'] == id:
-            return perf
+    if id < len(performances):
+        return performances[id]
     return None
 
 def countPerformances():
@@ -59,20 +60,29 @@ def getAverageRating():
     """Calculate the average rating"""
     performances = _read_performances_file()
     if not performances:
-        return 3  # Default middle value
+        return 3.0  # Default middle value
     
     total = sum(p['rating'] for p in performances)
-    return round(total / len(performances))
+    return round(total / len(performances), 1)
 
 def addPerformance(rating):
-    """Add a new performance rating with exclusive lock"""
+    """Add a new performance rating with exclusive lock (atomic operation)"""
     PERFORMANCES_FILE = get_performances_file()
+    
+    # Ensure file exists before trying to open in r+ mode
+    if not os.path.exists(PERFORMANCES_FILE):
+        _write_performances_file([])
     
     with open(PERFORMANCES_FILE, 'r+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
-            performances = json.load(f)
-        except:
+            f.seek(0)
+            content = f.read()
+            if content:
+                performances = json.loads(content)
+            else:
+                performances = []
+        except (json.JSONDecodeError, Exception):
             performances = []
         
         # Create new performance entry
@@ -80,13 +90,14 @@ def addPerformance(rating):
         new_performance = {
             'id': new_id,
             'rating': rating,
-            'timestamp': __import__('datetime').datetime.utcnow().isoformat()
+            'timestamp': datetime.utcnow().isoformat()
         }
         performances.append(new_performance)
         
-        # Write back to file
+        # Write back to file (move pointer to start)
         f.seek(0)
-        json.dump(performances, f)
+        json.dump(performances, f, indent=2)
+        # Truncate file to remove any leftover data
         f.truncate()
         fcntl.flock(f, fcntl.LOCK_UN)
     
@@ -111,3 +122,24 @@ def getMostCommonRating():
         return 3
     
     return max(distribution, key=distribution.get)
+
+def printPerformance(performance):
+    """Print a performance rating (for debugging)"""
+    print(
+        performance['id'], 
+        f"Rating: {performance['rating']}/5", 
+        "\nTimestamp:", performance['timestamp']
+    )
+
+# Main execution for testing
+if __name__ == "__main__":
+    # Note: This won't work standalone since it needs Flask app context
+    # This is just for documentation purposes
+    print("Performance module - use within Flask app context")
+    print("Functions available:")
+    print("- initPerformances()")
+    print("- getPerformances()")
+    print("- addPerformance(rating)")
+    print("- getAverageRating()")
+    print("- getRatingDistribution()")
+    print("- countPerformances()")

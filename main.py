@@ -93,9 +93,6 @@ app.register_blueprint(thesis_api)
 # Jokes file initialization
 with app.app_context():
     initJokes()
-# Performances file initialization
-with app.app_context():
-    initJokes()
     initPerformances()  # Add this line
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
