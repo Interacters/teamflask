@@ -90,6 +90,9 @@ app.register_blueprint(media_api)
 app.register_blueprint(chat_api)
 app.register_blueprint(thesis_api)
 
+#performance jokes API
+app.register_blueprint(performance_joke_api)
+
 # Jokes file initialization
 with app.app_context():
     initJokes()
