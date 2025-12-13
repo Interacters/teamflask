@@ -74,7 +74,7 @@ def getPromptClicks():
     # Return format: {1: 45, 2: 32, 3: 28, 4: 15, 5: 12}
     return {prompt['id']: prompt['clicks'] for prompt in prompts}
 
-def _increment_prompt_click(id):
+def increment_prompt_click(id):
     """Atomically increment click count for a prompt"""
     PROMPTS_FILE = get_prompts_file()
     with open(PROMPTS_FILE, 'r+') as f:

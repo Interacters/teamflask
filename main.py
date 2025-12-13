@@ -12,6 +12,8 @@ from api.jwt_authorize import token_required
 from api.media_api import media_api
 from hacks.performance import performance_api
 from hacks.performances import initPerformances
+from hacks.prompt import prompt_api
+from hacks.prompts import initPrompts
 
 
 # import "objects" from "this" project
@@ -49,6 +51,10 @@ from model.microblog import MicroBlog, Topic, init_microblogs
 from hacks.jokes import initJokes 
 from api.chat_api import chat_api
 from api.thesis_api import thesis_api
+from flask_cors import CORS
+
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:8001"}})
+
 # from model.announcement import Announcement ##temporary revert
 
 # server only Views
@@ -89,6 +95,8 @@ app.register_blueprint(post_api)  # Register the social media post API
 app.register_blueprint(media_api)
 app.register_blueprint(chat_api)
 app.register_blueprint(thesis_api)
+#MY PROMPTS REGISTering
+app.register_blueprint(prompt_api)
 
 # Jokes file initialization
 with app.app_context():
@@ -333,3 +341,7 @@ if __name__ == "__main__":
     port = app.config['FLASK_PORT']
     print(f"** Server running: http://localhost:{port}")  # Pretty link
     app.run(debug=True, host=host, port=port, use_reloader=False)
+with app.app_context():
+    initJokes()
+    initPerformances()
+    initPrompts()

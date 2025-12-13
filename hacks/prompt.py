@@ -31,7 +31,7 @@ class PromptsAPI:
     # POST /api/prompts/<id>/click - Increment click count
     class _IncrementClick(Resource):
         def post(self, id):
-            prompt = _increment_prompt_click(id)
+            prompt = increment_prompt_click(id)
             if prompt:
                 return jsonify(prompt)
             return jsonify({"error": "Prompt not found"}), 404
