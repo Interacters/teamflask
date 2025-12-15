@@ -10,7 +10,7 @@ performance_api = Blueprint('performance_api', __name__, url_prefix='/api/perfor
 # API generator https://flask-restful.readthedocs.io/en/latest/api.html#id1
 api = Api(performance_api)
 
-class PerformanceAPI:
+class PerformanceAPI
     
     class _Submit(Resource):
         """Submit a new performance rating"""
