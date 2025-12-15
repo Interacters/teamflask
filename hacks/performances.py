@@ -65,8 +65,8 @@ def getAverageRating():
     total = sum(p['rating'] for p in performances)
     return round(total / len(performances), 1)
 
-def addPerformance(rating):
-    """Add a new performance rating with exclusive lock (atomic operation)"""
+def addPerformance(rating, user_id=None, username=None):
+    """Add a new performance rating with user information"""
     PERFORMANCES_FILE = get_performances_file()
     
     # Ensure file exists before trying to open in r+ mode
@@ -85,19 +85,20 @@ def addPerformance(rating):
         except (json.JSONDecodeError, Exception):
             performances = []
         
-        # Create new performance entry
+        # Create new performance entry with user info
         new_id = len(performances)
         new_performance = {
             'id': new_id,
             'rating': rating,
+            'user_id': user_id,
+            'username': username or 'Guest',
             'timestamp': datetime.utcnow().isoformat()
         }
         performances.append(new_performance)
         
-        # Write back to file (move pointer to start)
+        # Write back to file
         f.seek(0)
         json.dump(performances, f, indent=2)
-        # Truncate file to remove any leftover data
         f.truncate()
         fcntl.flock(f, fcntl.LOCK_UN)
     
@@ -123,23 +124,16 @@ def getMostCommonRating():
     
     return max(distribution, key=distribution.get)
 
+def getUserPerformances(user_id):
+    """Get all performances by a specific user"""
+    performances = _read_performances_file()
+    return [p for p in performances if p.get('user_id') == user_id]
+
 def printPerformance(performance):
     """Print a performance rating (for debugging)"""
     print(
         performance['id'], 
-        f"Rating: {performance['rating']}/5", 
+        f"Rating: {performance['rating']}/5",
+        f"User: {performance.get('username', 'Unknown')}",
         "\nTimestamp:", performance['timestamp']
     )
-
-# Main execution for testing
-if __name__ == "__main__":
-    # Note: This won't work standalone since it needs Flask app context
-    # This is just for documentation purposes
-    print("Performance module - use within Flask app context")
-    print("Functions available:")
-    print("- initPerformances()")
-    print("- getPerformances()")
-    print("- addPerformance(rating)")
-    print("- getAverageRating()")
-    print("- getRatingDistribution()")
-    print("- countPerformances()")

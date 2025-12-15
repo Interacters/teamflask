@@ -1,6 +1,7 @@
-from flask import Blueprint, request, current_app
+from flask import Blueprint, request, current_app, g
 from flask_restful import Api, Resource
 import traceback
+from api.jwt_authorize import token_required
 
 from hacks.performances import *
 
@@ -17,8 +18,12 @@ class PerformanceAPI:
             """Handle OPTIONS preflight for CORS"""
             return {}, 200
         
+        @token_required()
         def post(self):
             try:
+                # Get current user from token
+                current_user = g.current_user
+                
                 data = request.get_json()
                 
                 if not data:
@@ -39,8 +44,12 @@ class PerformanceAPI:
                 if rating not in [1, 2, 3, 4, 5]:
                     return {'error': 'Invalid rating. Must be 1-5.'}, 400
                 
-                # Add the rating (atomic operation with file locking)
-                new_performance = addPerformance(rating)
+                # Add the rating with user info (atomic operation with file locking)
+                new_performance = addPerformance(
+                    rating=rating, 
+                    user_id=current_user.id,
+                    username=current_user.uid
+                )
                 
                 # Calculate average
                 avg_rating = getAverageRating()
@@ -61,7 +70,8 @@ class PerformanceAPI:
                     'average_rating': avg_rating,
                     'status': status,
                     'message': message,
-                    'performance_id': new_performance['id']
+                    'performance_id': new_performance['id'],
+                    'username': current_user.uid
                 }, 200
                 
             except Exception as e:
@@ -74,37 +84,44 @@ class PerformanceAPI:
                     'type': type(e).__name__
                 }, 500
     
-    # getPerformances()
     class _Read(Resource):
         """Get all performance ratings"""
+        @token_required()
         def get(self):
             try:
-                # Don't use jsonify() - Flask-RESTful handles JSON conversion
                 return getPerformances()
             except Exception as e:
                 current_app.logger.error(f"Error reading performances: {str(e)}")
                 return {'error': str(e)}, 500
     
-    # getPerformance(id)
     class _ReadID(Resource):
         """Get a specific performance rating by id"""
+        @token_required()
         def get(self, id):
             try:
                 performance = getPerformance(id)
                 if performance:
-                    # Don't use jsonify() - return dict directly
                     return performance
                 return {'error': 'Performance not found'}, 404
             except Exception as e:
                 current_app.logger.error(f"Error reading performance {id}: {str(e)}")
                 return {'error': str(e)}, 500
     
-    # getPerformanceStats()
+    class _ReadUserPerformances(Resource):
+        """Get all performances by a specific user"""
+        @token_required()
+        def get(self, user_id):
+            try:
+                performances = getUserPerformances(user_id)
+                return performances
+            except Exception as e:
+                current_app.logger.error(f"Error reading user performances: {str(e)}")
+                return {'error': str(e)}, 500
+    
     class _ReadStats(Resource):
         """Get performance statistics"""
         def get(self):
             try:
-                # Don't use jsonify() - return dict directly
                 return {
                     'count': countPerformances(),
                     'average': getAverageRating(),
@@ -115,14 +132,12 @@ class PerformanceAPI:
                 current_app.logger.error(f"Error reading stats: {str(e)}")
                 return {'error': str(e)}, 500
     
-    # countPerformances()
     class _ReadCount(Resource):
         """Get count of performance ratings"""
         def get(self):
             try:
                 count = countPerformances()
                 countMsg = {'count': count}
-                # Don't use jsonify() - return dict directly
                 return countMsg
             except Exception as e:
                 current_app.logger.error(f"Error counting performances: {str(e)}")
@@ -132,55 +147,6 @@ class PerformanceAPI:
     api.add_resource(_Submit, '/submit', '/submit/')
     api.add_resource(_Read, '', '/')
     api.add_resource(_ReadID, '/<int:id>', '/<int:id>/')
+    api.add_resource(_ReadUserPerformances, '/user/<int:user_id>', '/user/<int:user_id>/')
     api.add_resource(_ReadStats, '/stats', '/stats/')
     api.add_resource(_ReadCount, '/count', '/count/')
-
-# Testing code (similar to jokes.py)
-if __name__ == "__main__":
-    import requests
-    
-    # server = "http://127.0.0.1:8001"  # run local
-    server = 'https://flask.opencodingsociety.com'  # run from web
-    url = server + "/api/performance"
-    
-    print("Testing Performance API...")
-    
-    # Get count of performances
-    count_response = requests.get(url + "/count")
-    if count_response.ok:
-        count_json = count_response.json()
-        print(f"Total performances: {count_json['count']}")
-    
-    # Submit a test rating
-    test_rating = 4
-    submit_response = requests.post(
-        url + "/submit",
-        json={'rating': test_rating}
-    )
-    if submit_response.ok:
-        result = submit_response.json()
-        print(f"\nSubmitted rating: {test_rating}")
-        print(f"Average rating: {result['average_rating']}")
-        print(f"Status: {result['status']}")
-        print(f"Message: {result['message']}")
-    else:
-        print(f"Error: {submit_response.status_code}")
-        print(submit_response.text)
-    
-    # Get statistics
-    stats_response = requests.get(url + "/stats")
-    if stats_response.ok:
-        stats = stats_response.json()
-        print(f"\nStatistics:")
-        print(f"Count: {stats['count']}")
-        print(f"Average: {stats['average']}")
-        print(f"Distribution: {stats['distribution']}")
-        print(f"Most common: {stats['most_common']}")
-    
-    # Get all performances
-    all_response = requests.get(url)
-    if all_response.ok:
-        performances = all_response.json()
-        print(f"\nFirst 5 performances:")
-        for perf in performances[:5]:
-            print(f"  ID {perf['id']}: Rating {perf['rating']}/5 at {perf['timestamp']}")
