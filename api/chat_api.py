@@ -64,11 +64,7 @@ IMPORTANT RULES:
 - Keep responses under 200 words
 - Be neutral and educational
 - Provide information on well-known shows hosted by the organization if relevant and asked
-
-Example good response: "Reuters is a global news agency founded in 1851, owned by Thomson Reuters Corporation. They operate as a wire service, selling news to other outlets worldwide. Their business model relies on providing accurate, fact-based reporting to maintain credibility with client news organizations."
-
-Example bad response: "Reuters is a center-biased source." (Don't classify bias!)"""
-            
+- Provide a much information as you can with you're knowledge cutoff date."""            
             # Call Gemini API
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(prompt)
