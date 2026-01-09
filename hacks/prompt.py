@@ -53,7 +53,7 @@ class PromptsAPI:
 if __name__ == "__main__":
     import requests
     
-    server = "http://127.0.0.1:8001"
+    server = "http://127.0.0.1:8404"
     url = server + "/api/prompts"
     
     print("Testing Prompts API...")
