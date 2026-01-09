@@ -5,7 +5,7 @@ server {
 
     # Proxy Socket.IO connections to 8500
     location /socket.io/ {
-        proxy_pass http://localhost:8500;
+        proxy_pass http://localhost:8404;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
