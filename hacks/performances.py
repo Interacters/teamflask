@@ -11,34 +11,34 @@ def initPerformances():
     """
     with current_app.app_context():
         # Import here to avoid cycles at module import time
-        from hacks.performance import Performance
+        from model.performance import Performance
         db.create_all()
         return True
 
 
 def getPerformances():
     """Return a list of all performances as dictionaries (most recent first)."""
-    from hacks.performance import Performance
+    from model.performance import Performance
     items = Performance.list_all(limit=1000)
     return [p.read() for p in items]
 
 
 def getPerformance(id):
     """Get a specific performance by primary key id; returns dict or None."""
-    from hacks.performance import Performance
+    from model.performance import Performance
     p = Performance.query.get(id)
     return p.read() if p else None
 
 
 def countPerformances():
     """Return an integer count of performance rows."""
-    from hacks.performance import Performance
+    from model.performance import Performance
     return Performance.count_all()
 
 
 def getAverageRating():
     """Compute average rating across all performances. Default to 3.0 if none."""
-    from hacks.performance import Performance
+    from model.performance import Performance
     from sqlalchemy import func
     avg = db.session.query(func.avg(Performance.rating)).scalar()
     if avg is None:
@@ -51,7 +51,7 @@ def addPerformance(rating, user_id=None, username=None):
     Add a new performance record into the DB.
     Returns a dict matching the old JSON entry structure (id, rating, user_id, username, timestamp)
     """
-    from hacks.performance import Performance
+    from model.performance import Performance
     # Normalize inputs
     try:
         rating = int(rating)
@@ -68,7 +68,7 @@ def getRatingDistribution():
     """
     Return a dict with counts for ratings 1..5
     """
-    from hacks.performance import Performance
+    from model.performance import Performance
     from sqlalchemy import func
     # build base dict
     distribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
@@ -94,7 +94,7 @@ def getMostCommonRating():
 
 def getUserPerformances(user_id):
     """Return list of performance dicts for a given user_id (int)."""
-    from hacks.performance import Performance
+    from model.performance import Performance
     items = Performance.list_for_user_id(user_id, limit=1000)
     return [p.read() for p in items]
 
