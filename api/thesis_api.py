@@ -56,7 +56,7 @@ For each thesis statement, provide:
 2. A strength rating (1-10)
 3. A brief explanation of why it's strong or weak
 4. 2-3 supporting arguments that could be used
-5. 2-3 potential counterarguments to address
+5. 2-3 potential counterarguments to address AND ways to refute them (this is important!)
 
 Also provide overall recommendations for improving the thesis.
 
