@@ -1,5 +1,6 @@
 # imports from flask
 from datetime import datetime
+from pprint import pp
 from urllib.parse import urljoin, urlparse
 from flask import abort, redirect, render_template, request, send_from_directory, url_for, jsonify, current_app, g # import render_template from "public" flask libraries
 from flask_login import current_user, login_user, logout_user
@@ -68,7 +69,7 @@ load_dotenv()
 app.config['KASM_SERVER'] = os.getenv('KASM_SERVER')
 app.config['KASM_API_KEY'] = os.getenv('KASM_API_KEY')
 app.config['KASM_API_KEY_SECRET'] = os.getenv('KASM_API_KEY_SECRET')
-
+app.config['DATA_FOLDER'] = os.path.join(app.instance_path, 'data')
 
 
 # register URIs for api endpoints
@@ -101,7 +102,8 @@ app.register_blueprint(prompt_api)
 # Jokes file initialization
 with app.app_context():
     initJokes()
-    initPerformances()  # Add this line
+    initPerformances() 
+    initPrompts()
 # Tell Flask-Login the view function name of your login route
 login_manager.login_view = "login"
 
@@ -335,13 +337,12 @@ app.cli.add_command(custom_cli)
 with app.app_context():
     db.create_all()
     print("✅ Database tables created!")
-
+    initJokes()
+    initPerformances()
+    initPrompts()
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = app.config['FLASK_PORT']
     print(f"** Server running: http://localhost:{port}")  # Pretty link
     app.run(debug=True, host=host, port=port, use_reloader=False)
-with app.app_context():
-    initJokes()
-    initPerformances()
-    initPrompts()
+    
