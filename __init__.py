@@ -157,6 +157,7 @@ def after_request(response):
         'https://open-coding-society.github.io',
         'https://pages.opencodingsociety.com',
         'https://interacters.github.io',
+        'http://essaylab.opencodingsociety.com',
     ]
     
     if origin in allowed_origins:
