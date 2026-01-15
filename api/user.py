@@ -325,138 +325,152 @@ class UserAPI:
     
             return {'message': f'Sections {sections} deleted successfully'}, 200
     class _Security(Resource):
-        def post(self):
-            try:
-                body = request.get_json()
-                if not body:
-                    return {
-                        "message": "Please provide user details",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
-                ''' Get Data '''
-                uid = body.get('uid')
-                if uid is None:
-                    return {'message': f'User ID is missing'}, 401
-                password = body.get('password')
-                if not password:
-                    return {'message': f'Password is missing'}, 401
-                            
-                ''' Find user '''
-    
-                user = User.query.filter_by(_uid=uid).first()
-                
-                if user is None or not user.is_password(password):
-                    
-                    return {'message': f"Invalid user id or password"}, 401
-                            
-                # Check if user is found
-                if user:
-                    try:
-                        token = jwt.encode(
-                            {"_uid": user._uid},
-                            current_app.config["SECRET_KEY"],
-                            algorithm="HS256"
-                        )
-                        # Return JSON response with cookie
-                        is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
-                        
-                        # Create JSON response
-                        response_data = {
-                            "message": f"Authentication for {user._uid} successful",
-                            "user": {
-                                "uid": user._uid,
-                                "name": user.name,
-                                "role": user.role,
-                                "class": user._class if getattr(user, '_class', None) is not None else []
-                            }
-                        }
-                        resp = jsonify(response_data)
-                        
-                        # Set cookie
-                        if is_production:
-                            resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
-                                token,
-                                max_age=43200,  # 12 hours in seconds
-                                secure=True,
-                                httponly=True,
-                                path='/',
-                                samesite='None'
-                            )
-                        else:
-                            resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
-                                token,
-                                max_age=43200,  # 12 hours in seconds
-                                secure=False,
-                                httponly=False,  # Set to True for more security if JS access not needed
-                                path='/',
-                                samesite='Lax'
-                            )
-                        print(f"Token set: {token}")
-                        return resp 
-                    except Exception as e:
-                        return {
-                                        "error": "Something went wrong",
-                                        "message": str(e)
-                                    }, 500
+    def post(self):
+        """
+        Authenticate user and return JWT token via secure cookie.
+        
+        Request body:
+        {
+            "uid": "username",
+            "password": "password"
+        }
+        """
+        try:
+            body = request.get_json()
+            if not body:
                 return {
-                                "message": "Error fetching auth token!",
-                                "data": None,
-                                "error": "Unauthorized"
-                            }, 404
-            except Exception as e:
-                 return {
-                                "message": "Something went wrong!",
-                                "error": str(e),
-                                "data": None
-                            }, 500
-                 
-        @token_required()
-        def delete(self):
-            ''' Invalidate the current user's token by setting its expiry to 0 '''
-            current_user = g.current_user
-            try:
-                # Generate a token with practically 0 age
-                token = jwt.encode(
-                    {"_uid": current_user._uid, 
-                     "exp": datetime.utcnow()},
-                    current_app.config["SECRET_KEY"],
-                    algorithm="HS256"
+                    "message": "Please provide user details",
+                    "data": None,
+                    "error": "Bad request"
+                }, 400
+            
+            # ===== STEP 1: Validate input =====
+            uid = body.get('uid')
+            if uid is None:
+                return {'message': 'User ID is missing'}, 401
+            
+            password = body.get('password')
+            if not password:
+                return {'message': 'Password is missing'}, 401
+            
+            # ===== STEP 2: Find user and verify password =====
+            user = User.query.filter_by(_uid=uid).first()
+            
+            if user is None or not user.is_password(password):
+                return {'message': 'Invalid user id or password'}, 401
+            
+            # ===== STEP 3: Generate JWT token =====
+            token = jwt.encode(
+                {"_uid": user._uid},
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256"
+            )
+            
+            # ===== STEP 4: Determine if production or development =====
+            # Production: secure HTTPS cookies with SameSite=None
+            # Development: standard cookies with SameSite=Lax
+            is_production = not (request.host.startswith('localhost') or 
+                               request.host.startswith('127.0.0.1'))
+            
+            # ===== STEP 5: Create response =====
+            response_data = {
+                "message": f"Authentication for {user._uid} successful",
+                "user": {
+                    "uid": user._uid,
+                    "name": user.name,
+                    "role": user.role,
+                    "class": user._class if getattr(user, '_class', None) is not None else []
+                }
+            }
+            resp = jsonify(response_data)
+            
+            # ===== STEP 6: Set JWT cookie with proper security settings =====
+            if is_production:
+                # Production: HTTPS only, SameSite=None for cross-origin
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"],
+                    token,
+                    max_age=43200,  # 12 hours
+                    secure=True,    # Only send over HTTPS
+                    httponly=True,  # Not accessible via JavaScript
+                    path='/',
+                    samesite='None'  # Required for cross-origin in HTTPS
                 )
-                # You might want to log this action or take additional steps here
-                
-                # Prepare a response indicating the token has been invalidated
-                resp = Response("Token invalidated successfully")
-                is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
-                if is_production:
-                    resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
-                        token,
-                        max_age=0,  # Immediately expire the cookie
-                        secure=True,
-                        httponly=True,
-                        path='/',
-                        samesite='None'
-                    )
-                else:
-                    resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
-                        token,
-                        max_age=0,  # Immediately expire the cookie
-                        secure=False,
-                        httponly=False,  # Set to True for more security if JS access not needed
-                        path='/',
-                        samesite='Lax'
-                    )
-                return resp
-            except Exception as e:
-                return {
-                    "message": "Failed to invalidate token",
-                    "error": str(e)
-                }, 500
-
+            else:
+                # Development: HTTP allowed, SameSite=Lax
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"],
+                    token,
+                    max_age=43200,  # 12 hours
+                    secure=False,   # Allow HTTP
+                    httponly=False, # Allow JS access for debugging
+                    path='/',
+                    samesite='Lax'
+                )
+            
+            print(f"✅ Token set for user {user._uid}")
+            return resp
+        
+        except Exception as e:
+            print(f"❌ Authentication error: {e}")
+            return {
+                "error": "Something went wrong",
+                "message": str(e)
+            }, 500
+    
+    @token_required()
+    def delete(self):
+        """
+        Logout: invalidate the current user's token.
+        """
+        current_user = g.current_user
+        try:
+            # Generate token with immediate expiry
+            token = jwt.encode(
+                {
+                    "_uid": current_user._uid, 
+                    "exp": datetime.utcnow()
+                },
+                current_app.config["SECRET_KEY"],
+                algorithm="HS256"
+            )
+            
+            # Determine if production or development
+            is_production = not (request.host.startswith('localhost') or 
+                               request.host.startswith('127.0.0.1'))
+            
+            # Create response
+            resp = Response("Token invalidated successfully")
+            
+            # Clear cookie with matching settings
+            if is_production:
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"],
+                    token,
+                    max_age=0,      # Immediately expire
+                    secure=True,
+                    httponly=True,
+                    path='/',
+                    samesite='None'
+                )
+            else:
+                resp.set_cookie(
+                    current_app.config["JWT_TOKEN_NAME"],
+                    token,
+                    max_age=0,      # Immediately expire
+                    secure=False,
+                    httponly=False,
+                    path='/',
+                    samesite='Lax'
+                )
+            
+            return resp
+        
+        except Exception as e:
+            return {
+                "message": "Failed to invalidate token",
+                "error": str(e)
+            }, 500
     class _GradeData(Resource):
         """
         Grade data API operations
