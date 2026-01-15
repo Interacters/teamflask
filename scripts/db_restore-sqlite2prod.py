@@ -6,8 +6,8 @@ import os
 import time
 
 # Configuration
-PROD_AUTH_URL = "https://flask.opencodingsociety.com/api/authenticate"
-PROD_DATA_URL = "https://flask.opencodingsociety.com/api/user"  # Usually singular for single user creation
+PROD_AUTH_URL = "https://essaylab.opencodingsociety.com/api/authenticate"
+PROD_DATA_URL = "https://essaylab.opencodingsociety.com/api/user"  # Usually singular for single user creation
 LOCAL_JSON = "instance/data.json"
 
 # Credentials for production server

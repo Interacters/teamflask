@@ -38,8 +38,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from main import app, db, initUsers
 
 # Locations and credentials 
-AUTH_URL = "https://flask.opencodingsociety.com/api/authenticate"
-DATA_URL = "https://flask.opencodingsociety.com/api/user"
+AUTH_URL = "https://essaylab.opencodingsociety.com/api/authenticate"
+DATA_URL = "https://essaylab.opencodingsociety.com/api/user"
 UID = app.config['DEFAULT_UID'] 
 PASSWORD = app.config['DEFAULT_USER_PASSWORD']
 
