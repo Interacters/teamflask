@@ -1,113 +1,76 @@
-from flask import request, current_app, g
+from flask import request
+from flask import current_app, g
 from functools import wraps
 import jwt
 from model.user import User
 
 def token_required(roles=None):
     '''
-    Guard API endpoints with JWT token validation.
-    
-    Checks:
-    1. JWT token presence in cookies
-    2. Token validity and expiration
-    3. User exists in database
-    4. User has required role (if specified)
-    
-    Sets g.current_user for use in decorated function.
+    This function is used to guard API endpoints that require authentication.
+    Here is how it works:
+      1. checks for the presence of a valid JWT token in the request cookie
+      2. decodes the token and retrieves the user data
+      3. checks if the user data is found in the database
+      4. checks if the user has the required role
+      5. set the current_user in the global context (Flask's g object)
+      6. returns the decorated function if all checks pass
+    Here are some possible error responses:    
+      A. 401 / Unauthorized: token is missing or invalid
+      B. 403 / Forbidden: user has insufficient permissions
+      C. 500 / Internal Server Error: something went wrong with the token decoding
     '''
     def decorator(func_to_guard):
         @wraps(func_to_guard)
         def decorated(*args, **kwargs):
-            # ===== STEP 1: Get token from cookie =====
-            # Try standard JWT token name first
-            token = request.cookies.get(current_app.config.get("JWT_TOKEN_NAME"))
-            
-            # If not found, try alternative name (for compatibility)
-            if not token:
-                token = request.cookies.get("jwt_python_flask")
-            
-            # If still not found, check Authorization header as fallback
-            if not token:
-                auth_header = request.headers.get('Authorization')
-                if auth_header and auth_header.startswith('Bearer '):
-                    token = auth_header.split('Bearer ')[1]
-            
-            # ===== STEP 2: Token validation =====
+            token = request.cookies.get(current_app.config["JWT_TOKEN_NAME"])
             if not token:
                 return {
                     "message": "Authentication Token is missing!",
                     "data": None,
                     "error": "Unauthorized"
                 }, 401
-            
             try:
-                # Decode JWT token
-                data = jwt.decode(
-                    token, 
-                    current_app.config["SECRET_KEY"], 
-                    algorithms=["HS256"]
-                )
-                
-                # ===== STEP 3: Validate user exists =====
-                current_user = User.query.filter_by(_uid=data.get("_uid")).first()
+                # Decode the token and retrieve the user data
+                data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+                current_user = User.query.filter_by(_uid=data["_uid"]).first()
                 if current_user is None:
                     return {
-                        "message": "Invalid Authentication token! User not found.",
+                        "message": "Invalid Authentication token!",
                         "data": None,
                         "error": "Unauthorized"
                     }, 401
-                
-                # ===== STEP 4: Check role requirement (if specified) =====
+                    
+                # Check user has the required role, when role is required 
                 if roles and current_user.role not in roles:
                     return {
-                        "message": f"Insufficient permissions. Required roles: {roles}",
+                        "message": "Insufficient permissions. Required roles: {}".format(roles),
                         "data": None,
                         "error": "Forbidden"
                     }, 403
-                
-                # ===== STEP 5: Set global user context =====
+                    
+                # Success finding user and (optional) role
+                # Set the current_user in the global context
+                # Flask's g object is a global object that lasts for the duration of the request
+                # The g.current_user can be referenced in decorated function 
                 g.current_user = current_user
-                
-                # Handle CORS preflight
-                if request.method == 'OPTIONS':
-                    return ('', 200)
-                
-                # Success: call decorated function
-                return func_to_guard(*args, **kwargs)
             
-            except jwt.ExpiredSignatureError:
-                return {
-                    "message": "Token has expired!",
-                    "data": None,
-                    "error": "Unauthorized"
-                }, 401
-            
-            except jwt.InvalidTokenError as e:
-                return {
-                    "message": "Invalid token!",
-                    "data": None,
-                    "error": str(e)
-                }, 401
-            
+            # Error exception is for unknown jwt.decode errors 
             except Exception as e:
                 return {
-                    "message": "Error decoding token!",
+                    "message": "Something went wrong decoding the token!",
                     "data": None,
                     "error": str(e)
                 }, 500
-        
+
+            # If this is a CORS preflight request, return 200 OK immediately
+            if request.method == 'OPTIONS':
+                return ('', 200)
+
+            # Success, return to the decorated function
+            # func_to_guard is the function with the @token_required
+            # func_to_guard returns with the original function arguments
+            return func_to_guard(*args, **kwargs)
+
         return decorated
-    
+
     return decorator
-
-
-# ===== UTILITY FUNCTION FOR OPTIONAL AUTH =====
-def get_current_user():
-    """
-    Try to get current user without raising errors.
-    Returns None if not authenticated.
-    """
-    try:
-        return g.current_user if hasattr(g, 'current_user') else None
-    except:
-        return None
