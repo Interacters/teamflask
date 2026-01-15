@@ -54,7 +54,7 @@ from api.chat_api import chat_api
 from api.thesis_api import thesis_api
 from flask_cors import CORS
 
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:8404"}})
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:8404, https://open-coding-society.github.io, https://interacters.github.io"}})
 
 # from model.announcement import Announcement ##temporary revert
 
