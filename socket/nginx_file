@@ -6,6 +6,11 @@
       location / {
           proxy_pass http://localhost:8404;
 
+        add_header "Access-Control-Allow-Credentials" "true" always;
+        add_header "Access-Control-Allow-Origin" "https://interacters.github.io" always;
+        add_header "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS, HEAD" always;
+        add_header "Access-Control-Allow-Headers" "Authorization, Origin, X-Requested-With, Content-Type, Accept" always;
+
           # Preflighted requests
           if ($request_method = OPTIONS) {
               add_header "Access-Control-Allow-Credentials" "true" always;
