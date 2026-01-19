@@ -42,6 +42,7 @@ cors = CORS(
        'https://open-coding-society.github.io',
        'https://pages.opencodingsociety.com',
        'https://interacters.github.io',
+       'http://essaylab.opencodingsociety.com'
    ],
    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
    allow_headers=[
