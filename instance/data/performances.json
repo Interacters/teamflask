@@ -82,5 +82,47 @@
     "user_id": 4,
     "username": "anwitabandaru-gif",
     "timestamp": "2025-12-18T06:00:10.876427"
+  },
+  {
+    "id": 12,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-19T22:07:30.886167"
+  },
+  {
+    "id": 13,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-19T22:10:29.933843"
+  },
+  {
+    "id": 14,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-20T01:00:00.341045"
+  },
+  {
+    "id": 15,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-20T01:01:21.305823"
+  },
+  {
+    "id": 16,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-20T01:04:27.418677"
+  },
+  {
+    "id": 17,
+    "rating": 3,
+    "user_id": 1,
+    "username": "sloanesom",
+    "timestamp": "2025-12-20T01:13:50.161868"
   }
 ]
