@@ -15,7 +15,11 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
+# Near the top with other imports (around line 20)
+from api.bias_analysis_api import bias_analysis_api
 
+# In the app.register_blueprint section (around line 80)
+app.register_blueprint(bias_analysis_api)
 
 # import "objects" from "this" project
 from __init__ import app, db, login_manager  # Key Flask objects 
