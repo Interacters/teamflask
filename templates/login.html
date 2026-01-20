@@ -2,41 +2,153 @@
 {% set project = "Login" %}
 
 {% block body %}
-    <!-- Start of body content specific to page -->
-    <div class="px-5 py-5 mx-auto">
-        <div class="container py-4">
-            <header class="pb-3 mb-4 border-bottom border-primary text-light">
-                <span class="fs-4">Login Page</span>
-            </header>
-        </div>
-    
-        <div class="container py-4 text-light bg-primary">
-    
-            <div class="container bg-secondary py-4">
-                <div class="p-5 mb-4 bg-light text-dark rounded-3">
-                    <form name="f" action="{{ url_for('login') }}" method="POST">
-                        <table>
-                            {% if error %}
-                                <tr class="alert alert-error">
-                                    Invalid username and password.
-                                </tr>
-                            {% endif %}
-                            {% if logout %}
-                                <tr class="alert alert-success">
-                                    You have been logged out.
-                                </tr>
-                            {% endif %}
-                            <tr><th><label for="username">User ID</label></th></tr>
-                            <tr><td><input id='username' name="username" size="20" required></td></tr>
-                            <tr><th><label for="password">Password</label></th></tr>
-                            <tr><td><input type="password" id="password" name="password" size="20" required></td></tr>
-                            <!-- Hidden input for 'next' page, which is set on unauthorized redirects -->
-                            <input type="hidden" name="next" value="{{ next }}">
-                            <tr><th><input type="submit" value="Submit"></th></tr>
-                        </table>
-                    </form>
-                </div>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --success: #059669;
+        --danger: #dc2626;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-900: #111827;
+    }
 
-        </div>
+    body {
+        background: linear-gradient(to bottom, #0f172a, #1e293b);
+        min-height: 100vh;
+    }
+
+    .login-container {
+        padding: 2.5rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .login-header {
+        background: #c9c9f5;
+        border-radius: 12px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary);
+    }
+
+    .login-header span {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+
+    .login-form-container {
+        background: #c9c9f5;
+        border-radius: 12px;
+        padding: 2.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid var(--danger);
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-left: 4px solid var(--success);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--gray-200);
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        background: white;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .submit-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+
+    .submit-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<div class="login-container">
+    <div class="login-header">
+        <span>Login Page</span>
     </div>
+
+    <div class="login-form-container">
+        {% if error %}
+        <div class="alert alert-error">
+            Invalid username and password.
+        </div>
+        {% endif %}
+        
+        {% if logout %}
+        <div class="alert alert-success">
+            You have been logged out.
+        </div>
+        {% endif %}
+
+        <form name="f" action="{{ url_for('login') }}" method="POST">
+            <div class="form-group">
+                <label for="username" class="form-label">User ID</label>
+                <input id="username" name="username" class="form-input" size="20" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-input" size="20" required>
+            </div>
+
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <button type="submit" class="submit-btn">Submit</button>
+        </form>
+    </div>
+</div>
 {% endblock %}

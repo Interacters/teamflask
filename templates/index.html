@@ -2,63 +2,180 @@
 {% set project = "Home" %}
 
 {% block body %}
-    <!-- Start of body content specific to page -->
-    <div class="px-5 py-5 mx-auto">
-        <h1 class="text-white"><strong>Python Home Page</strong></h1>
-        <div class="row">
-            <div class="col-4">
-                <div class="card">
-                    <img class="card-img-top" src="{{ url_for('static', filename='assets/python.jpeg') }}" alt="Python Development" height="250">
-                    <div class="card-body">
-                    <h5 class="card-title">What should <mark>Student Developers learn</mark>?</h5>
-                    <p class="card-text">
-                        <ol>
-                            <li>Python 3.12 is used for most of our backend PBL. HTML, CSS, JavaScript will be used in frontend</li>
-                            <li>Visuals Studio Code (VS Code) is the primary editor, Interactive Development Environment (IDE).</li>
-                            <li>GitHub.  Managing and sharing code change, branches, pull requests, issues, and more will be through GitHub.</li>
-                            <li>DevOps. Python programmers should have a passion for managing the environment and learning automation (Git, Linux, Bash, Python Packages, Docker).</li>
-                            <li>API and Microservice using Flask.  Mastering development techniques in creating and consuming RESTful APIs</li>
-                        </ol>
-                    </p>
-                    <a href="#" class="btn btn-primary">Go somewhere</a>
-                    </div>
-                </div>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --success: #059669;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-900: #111827;
+    }
+
+    body {
+        background: linear-gradient(to bottom, #0f172a, #1e293b);
+        min-height: 100vh;
+    }
+
+    .home-container {
+        padding: 2.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .page-title {
+        background: #c9c9f5;
+        border-radius: 12px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-title h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0;
+        letter-spacing: -0.025em;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-card {
+        background: #c9c9f5;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-img-top {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+    }
+
+    .card-title mark {
+        background: #e0e7ff;
+        color: var(--gray-900);
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-weight: 700;
+    }
+
+    .card-text {
+        color: var(--gray-700);
+        line-height: 1.6;
+    }
+
+    .card-text ol {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .card-text li {
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        border: none;
+        padding: 0.65rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s ease;
+        margin-top: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        color: white;
+    }
+</style>
+
+<div class="home-container">
+    <div class="page-title">
+        <h1>EssayLab Development</h1>
+    </div>
+
+    <div class="card-grid">
+        <div class="info-card">
+            <img class="card-img-top" src="{{ url_for('static', filename='assets/python.jpeg') }}" alt="Python Development">
+            <div class="card-body">
+                <h5 class="card-title">What should <mark>Student Developers learn</mark>?</h5>
+                <p class="card-text">
+                    <ol>
+                        <li>Python 3.12 is used for most of our backend PBL. HTML, CSS, JavaScript will be used in frontend</li>
+                        <li>Visual Studio Code (VS Code) is the primary editor, Interactive Development Environment (IDE).</li>
+                        <li>GitHub. Managing and sharing code change, branches, pull requests, issues, and more will be through GitHub.</li>
+                        <li>DevOps. Python programmers should have a passion for managing the environment and learning automation (Git, Linux, Bash, Python Packages, Docker).</li>
+                        <li>API and Microservice using Flask. Mastering development techniques in creating and consuming RESTful APIs</li>
+                    </ol>
+                </p>
+                <a href="#" class="btn btn-primary">Learn More</a>
             </div>
-            <div class="col-4">
-                <div class="card">
-                    <img class="card-img-top" src="{{ url_for('static', filename='assets/flask.png') }}" alt="Flask Development" height="250">
-                    <div class="card-body">
-                    <h5 class="card-title">What is <mark>Flask</mark>? How do I start Web development?</h5>
-                    <p class="card-text">
-                        <ol>
-                            <li>Flask Framework is the popular Web Application development framework of Python.</li>
-                            <li>Blueprint is Python technique to help abstract complexity, moving information into independent files and directories. Blueprints are intended to encapsulate feature-sized sections of our application into well organized files.</li>
-                            <li>HTML using Bootstrap is a great way to build interesting pages and reduce CSS</li>
-                            <li>Jinja2 is a server-side Python like template engine, supports HTML5 web development, and provides full integration with Flask.</li>
-                        </ol>
-                    </p>
-                    <a href="#" class="btn btn-primary">Go somewhere</a>
-                    </div>
-                </div>
+        </div>
+
+        <div class="info-card">
+            <img class="card-img-top" src="{{ url_for('static', filename='assets/flask.png') }}" alt="Flask Development">
+            <div class="card-body">
+                <h5 class="card-title">What is <mark>Flask</mark>? How do I start Web development?</h5>
+                <p class="card-text">
+                    <ol>
+                        <li>Flask Framework is the popular Web Application development framework of Python.</li>
+                        <li>Blueprint is Python technique to help abstract complexity, moving information into independent files and directories. Blueprints are intended to encapsulate feature-sized sections of our application into well organized files.</li>
+                        <li>HTML using Bootstrap is a great way to build interesting pages and reduce CSS</li>
+                        <li>Jinja2 is a server-side Python like template engine, supports HTML5 web development, and provides full integration with Flask.</li>
+                    </ol>
+                </p>
+                <a href="#" class="btn btn-primary">Get Started</a>
             </div>
-            <div class="col-4">
-                <div class="card">
-                    <img class="card-img-top" src="{{ url_for('static', filename='assets/pythondb.png') }}" alt="Backend and Persistence" height="250">
-                    <div class="card-body">
-                    <h5 class="card-title">How do you manage <mark>Persistent data</mark> with Python?</h5>
-                    <p class="card-text">
-                        <ol>
-                            <li>A Database is an example of persistent data that is held on a computer.  Programming languages and frameworks allow you to store and retrive data.</li>
-                            <li>SQL stands for Structured Query Language · SQL lets you access and manipulate databases and has become a long lasting development standard.</li>
-                            <li>SQLAlchemy is the Python SQL toolkit and Object Relational Mapper (ORM) that gives application developers the full power and flexibility of SQL.</li>
-                            <li>There are many newer and sometimes easier Database languages and frameworks.  Mongo, DynamoDB, Neo4J are Databases being used by students developers in last 3 years.</li>
-                        </ol>
-                    </p>
-                    <a href="#" class="btn btn-primary">Go somewhere</a>
-                    </div>
-                </div>
+        </div>
+
+        <div class="info-card">
+            <img class="card-img-top" src="{{ url_for('static', filename='assets/pythondb.png') }}" alt="Backend and Persistence">
+            <div class="card-body">
+                <h5 class="card-title">How do you manage <mark>Persistent data</mark> with Python?</h5>
+                <p class="card-text">
+                    <ol>
+                        <li>A Database is an example of persistent data that is held on a computer. Programming languages and frameworks allow you to store and retrieve data.</li>
+                        <li>SQL stands for Structured Query Language. SQL lets you access and manipulate databases and has become a long lasting development standard.</li>
+                        <li>SQLAlchemy is the Python SQL toolkit and Object Relational Mapper (ORM) that gives application developers the full power and flexibility of SQL.</li>
+                        <li>There are many newer and sometimes easier Database languages and frameworks. Mongo, DynamoDB, Neo4J are Databases being used by students developers in last 3 years.</li>
+                    </ol>
+                </p>
+                <a href="#" class="btn btn-primary">Explore Databases</a>
             </div>
-            
         </div>
     </div>
+</div>
 {% endblock %}
