@@ -2,65 +2,464 @@
 
 {% block body %}
 
-<div class="container mt-5">
-    <h1>User Management</h1>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --primary-light: #3b82f6;
+        --secondary: #0891b2;
+        --success: #059669;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --dark: #111827;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+    }
 
-    <table class="table table-striped" id="userTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>UID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Profile Picture</th>
-                <th>Kasm Server Needed</th>
-                <th>Courses</th>
-                <th>Commits</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in user_data %}
-            {% if user.id == current_user.id or current_user.role == 'Admin' %}
-            <tr id="user-{{ user.id }}">
-                <td>{{ user.id }}</td>
-                <td>{{ user.uid }}</td>
-                <td>{{ user.name }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.role }}</td>
-                <td>
-                    {% if user.pfp %}
-                    <img src="{{ url_for('uploaded_file', filename=user.uid + '/' + user.pfp) }}" 
-                         alt="Profile Picture" 
-                         class="img-thumbnail" 
-                         style="width: 50px; height: 50px;">
-                    {% else %}
-                    <img src="{{ url_for('static', filename='assets/pythondb.png') }}" 
-                         alt="Default Profile Picture" 
-                         class="img-thumbnail" 
-                         style="width: 50px; height: 50px;">
-                    {% endif %}
-                </td>
-                <td id="kasm-{{ user.id }}">{{ user.kasm_server_needed }}</td>
-                <td>
-                    {% for section in user.sections %}
-                    {{ section.abbreviation }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </td>
-                <td id="commits-{{ user.uid }}">Loading...</td>
-                <td>
-                    <button class="btn btn-primary edit-btn" data-id="{{ user.id }}">Edit</button>
-                    {% if current_user.role == 'Admin' %}
-                    <button class="btn btn-danger delete-btn" data-id="{{ user.id }}">Delete</button>
-                    <button class="btn btn-warning reset-password-btn" data-id="{{ user.id }}">Reset Password</button>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
+    body {
+        background: linear-gradient(to bottom, #0f172a, #1e293b);
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+    }
+
+    .dashboard-container {
+        padding: 2.5rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        background: #c9c9f5;
+        border-radius: 12px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid var(--primary);
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.025em;
+    }
+
+    .page-header p {
+        color: var(--gray-600);
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        background: #c9c9f5;
+        padding: 0.5rem;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        width: fit-content;
+    }
+
+    .tab-btn {
+        background: transparent;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--gray-600);
+        font-size: 0.95rem;
+    }
+
+    .tab-btn:hover {
+        background: var(--gray-100);
+        color: var(--gray-900);
+    }
+
+    .tab-btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    }
+
+    .table-card {
+        background: #c9c9f5;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+
+    .table-card.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .table-card h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0 0 1.5rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--gray-200);
+    }
+
+    /* DataTables Customization */
+    .dataTables_wrapper {
+        font-family: inherit;
+    }
+
+    .dataTables_filter input {
+        border: 2px solid var(--gray-200);
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        margin-left: 0.5rem;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .dataTables_filter input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .dataTables_length select {
+        border: 2px solid var(--gray-200);
+        border-radius: 6px;
+        padding: 0.5rem 2rem 0.5rem 1rem;
+        margin: 0 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    table.dataTable {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100% !important;
+    }
+
+    table.dataTable thead th {
+        background: var(--gray-900);
+        color: white;
+        font-weight: 600;
+        padding: 1rem 0.75rem;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+        border: none;
+    }
+
+    table.dataTable thead th:first-child {
+        border-top-left-radius: 8px;
+    }
+
+    table.dataTable thead th:last-child {
+        border-top-right-radius: 8px;
+    }
+
+    table.dataTable tbody tr {
+        transition: all 0.15s ease;
+    }
+
+    table.dataTable tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    table.dataTable tbody td {
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid var(--gray-200);
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .profile-img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--gray-200);
+    }
+
+    .badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .badge-admin {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-teacher {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-user {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .badge-true {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-false {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .action-btn {
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin: 0 0.25rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-edit {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-edit:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-delete {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #b91c1c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-reset {
+        background: var(--warning);
+        color: white;
+    }
+
+    .btn-reset:hover {
+        background: #b45309;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .rating-stars {
+        color: #f59e0b;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--gray-50);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--gray-200);
+    }
+
+    .stat-card h3 {
+        font-size: 0.8rem;
+        color: var(--gray-600);
+        margin: 0 0 0.75rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }
+
+    .stat-card .value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+    }
+
+    .loading-spinner {
+        color: var(--gray-600);
+        font-size: 0.85rem;
+    }
+
+    code {
+        background: var(--gray-100);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: var(--gray-700);
+        font-family: 'Courier New', monospace;
+    }
+
+    .course-tag {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin: 2px;
+        display: inline-block;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="page-header">
+        <h1>Management Dashboard</h1>
+        <p>Manage users and track performance ratings</p>
+    </div>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('users')">
+            User Management
+        </button>
+        <button class="tab-btn" onclick="switchTab('performance')">
+            Performance Ratings
+        </button>
+    </div>
+
+    <!-- Users Table -->
+    <div id="users-table" class="table-card active">
+        <h2>User Directory</h2>
+        <table class="table table-striped" id="userTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>UID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Avatar</th>
+                    <th>Kasm</th>
+                    <th>Courses</th>
+                    <th>Commits (30d)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in user_data %}
+                {% if user.id == current_user.id or current_user.role == 'Admin' %}
+                <tr id="user-{{ user.id }}">
+                    <td><strong>{{ user.id }}</strong></td>
+                    <td><code>{{ user.uid }}</code></td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="badge badge-{{ user.role.lower() }}">
+                            {{ user.role }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.pfp %}
+                        <img src="{{ url_for('uploaded_file', filename=user.uid + '/' + user.pfp) }}" 
+                             alt="Profile" 
+                             class="profile-img">
+                        {% else %}
+                        <img src="{{ url_for('static', filename='assets/pythondb.png') }}" 
+                             alt="Default" 
+                             class="profile-img">
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'true' if user.kasm_server_needed else 'false' }}">
+                            {{ 'Yes' if user.kasm_server_needed else 'No' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% for section in user.sections %}
+                        <span class="course-tag">
+                            {{ section.abbreviation }}
+                        </span>
+                        {% endfor %}
+                    </td>
+                    <td id="commits-{{ user.uid }}" class="loading-spinner">Loading...</td>
+                    <td>
+                        <button class="action-btn btn-edit edit-btn" data-id="{{ user.id }}">
+                            Edit
+                        </button>
+                        {% if current_user.role == 'Admin' %}
+                        <button class="action-btn btn-delete delete-btn" data-id="{{ user.id }}">
+                            Delete
+                        </button>
+                        <button class="action-btn btn-reset reset-password-btn" data-id="{{ user.id }}">
+                            Reset
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Performance Table -->
+    <div id="performance-table" class="table-card">
+        <h2>Performance Ratings</h2>
+        
+        <div class="stats-grid" id="performanceStats">
+            <div class="stat-card">
+                <h3>Total Ratings</h3>
+                <div class="value" id="totalRatings">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Rating</h3>
+                <div class="value" id="avgRating">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Most Common</h3>
+                <div class="value" id="mostCommon">-</div>
+            </div>
+        </div>
+
+        <table class="table table-striped" id="performanceTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Rating</th>
+                    <th>User ID</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody id="performanceTableBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <div class="loading-spinner">Loading performance data...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- jQuery, DataTables, and Bootstrap -->
@@ -69,15 +468,90 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    $(document).ready(function () {
-        // Initialize DataTables
-        const table =  $("#userTable").DataTable(); // repersents table
+    let userTableInstance;
+    let performanceTableInstance;
 
-        table.page.len(-1).draw();  // shows all users and commits
-        // Function to fetch commits
+    // Tab switching
+    function switchTab(tabName) {
+        // Update button states
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Show/hide tables
+        document.querySelectorAll('.table-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        document.getElementById(`${tabName}-table`).classList.add('active');
+
+        // Load performance data if switching to that tab
+        if (tabName === 'performance' && !performanceTableInstance) {
+            loadPerformanceData();
+        }
+    }
+
+    // Load performance data
+    async function loadPerformanceData() {
+        try {
+            // Fetch stats
+            const statsResponse = await fetch('/api/performance/stats');
+            const stats = await statsResponse.json();
+            
+            document.getElementById('totalRatings').textContent = stats.count || 0;
+            document.getElementById('avgRating').textContent = (stats.average || 0).toFixed(1);
+            document.getElementById('mostCommon').textContent = stats.most_common || '-';
+
+            // Fetch all performances
+            const perfResponse = await fetch('/api/performance/');
+            const performances = await perfResponse.json();
+
+            const tbody = document.getElementById('performanceTableBody');
+            tbody.innerHTML = '';
+
+            if (performances.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #6b7280;">No performance data yet</td></tr>';
+            } else {
+                performances.forEach(perf => {
+                    const stars = '★'.repeat(perf.rating) + '☆'.repeat(5 - perf.rating);
+                    const row = `
+                        <tr>
+                            <td><strong>${perf.id}</strong></td>
+                            <td><code>${perf.username || 'Anonymous'}</code></td>
+                            <td><span class="rating-stars">${stars}</span> <strong>${perf.rating}/5</strong></td>
+                            <td>${perf.user_id || '-'}</td>
+                            <td>${new Date(perf.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+
+                // Initialize DataTable for performance
+                if (performanceTableInstance) {
+                    performanceTableInstance.destroy();
+                }
+                performanceTableInstance = $('#performanceTable').DataTable({
+                    order: [[0, 'desc']],
+                    pageLength: 25
+                });
+            }
+        } catch (error) {
+            console.error('Error loading performance data:', error);
+            document.getElementById('performanceTableBody').innerHTML = 
+                '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #dc2626;">Error loading data</td></tr>';
+        }
+    }
+
+    $(document).ready(function () {
+        // Initialize User DataTable
+        userTableInstance = $("#userTable").DataTable({
+            pageLength: -1,
+            order: [[0, 'asc']]
+        });
+
+        // Fetch commits for users
         async function fetchAdminData(userUid) {
             const commitsElement = $(`#commits-${userUid}`);
-
             if (!commitsElement.length) return;
 
             const today = new Date();
@@ -91,81 +565,85 @@
                 const response = await fetch(`/api/analytics/commits/${userUid}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ start_date: formattedStartDate, end_date: formattedEndDate })
+                    body: JSON.stringify({ 
+                        start_date: formattedStartDate, 
+                        end_date: formattedEndDate 
+                    })
                 });
 
                 if (!response.ok) throw new Error(`Error: ${response.statusText}`);
 
                 const data = await response.json();
-                commitsElement.text(data.commits?.total_commit_contributions || "0");
+                const commits = data.commits?.total_commit_contributions || 0;
+                commitsElement.html(`<strong style="color: var(--success);">${commits}</strong>`);
 
             } catch (error) {
                 console.error("Error:", error);
+                commitsElement.html('<span style="color: var(--danger);">Error</span>');
             }
         }
 
-        // Batch processing with delay
+        // Process users with delay
         async function processUsersWithDelay() {
             const users = $("[id^='commits-']");
             console.log(`Total users found: ${users.length}`);
 
-
             for (let i = 0; i < users.length; i++) {
                 const userUid = users[i].id.split("-")[1];
-
                 await fetchAdminData(userUid);
 
                 if ((i + 1) % 15 === 0) {
-                    console.log(`Pausing for 5 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 4000)); // tinker this however depending on rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 4000));
                 } else {
-                    console.log(`Waiting for 2 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 100));  // tinker this however depending on rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
             }
 
-            table.page.len(10).draw();  
+            userTableInstance.page.len(10).draw();
         }
 
-        // Start processing users with a delay yep
         processUsersWithDelay();
 
-        // Handle delete action
+        // Delete user
         document.querySelectorAll(".delete-btn").forEach(button => {
             button.addEventListener("click", function () {
                 const id = this.dataset.id;
+                if (!confirm('Are you sure you want to delete this user?')) return;
+
                 fetch(`/users/delete/${id}`, {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert(data.message || "User deleted successfully.");
-                        location.reload();
-                    })
-                    .catch(error => {
-                        console.error("Error deleting user:", error);
-                        alert("Error deleting user.");
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || "User deleted successfully.");
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error("Error deleting user:", error);
+                    alert("Error deleting user.");
+                });
             });
         });
 
-        // Handle reset password action
+        // Reset password
         document.querySelectorAll(".reset-password-btn").forEach(button => {
             button.addEventListener("click", function () {
                 const id = this.dataset.id;
+                if (!confirm('Reset password for this user?')) return;
+
                 fetch(`/users/reset_password/${id}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert(data.message || "Password reset successfully.");
-                    })
-                    .catch(error => {
-                        console.error("Error resetting password:", error);
-                        alert("Error resetting password.");
-                    });
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message || "Password reset successfully.");
+                })
+                .catch(error => {
+                    console.error("Error resetting password:", error);
+                    alert("Error resetting password.");
+                });
             });
         });
     });
