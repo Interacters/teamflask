@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, g
 from flask_restful import Api, Resource
 from datetime import datetime
 from __init__ import db
+from model.media import MediaScore, MediaPerson
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
