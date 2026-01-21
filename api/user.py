@@ -325,6 +325,9 @@ class UserAPI:
     
             return {'message': f'Sections {sections} deleted successfully'}, 200
     class _Security(Resource):
+        def options(self):
+            return '', 200
+    
         def post(self):
             try:
                 body = request.get_json()
@@ -334,23 +337,19 @@ class UserAPI:
                         "data": None,
                         "error": "Bad request"
                     }, 400
-                ''' Get Data '''
+                
                 uid = body.get('uid')
                 if uid is None:
                     return {'message': f'User ID is missing'}, 401
                 password = body.get('password')
                 if not password:
                     return {'message': f'Password is missing'}, 401
-                            
-                ''' Find user '''
-    
+                
                 user = User.query.filter_by(_uid=uid).first()
                 
                 if user is None or not user.is_password(password):
-                    
                     return {'message': f"Invalid user id or password"}, 401
-                            
-                # Check if user is found
+                
                 if user:
                     try:
                         token = jwt.encode(
@@ -358,8 +357,23 @@ class UserAPI:
                             current_app.config["SECRET_KEY"],
                             algorithm="HS256"
                         )
-                        # Return JSON response with cookie
-                        is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                        
+                        # BETTER production detection using Origin header
+                        origin = request.headers.get('Origin', '')
+                        host = request.host
+                        
+                        # Check if request is from production frontend OR if host is production domain
+                        is_production = (
+                            'interacters.github.io' in origin or
+                            'opencodingsociety.com' in origin or
+                            'open-coding-society.github.io' in origin or
+                            'essaylab.opencodingsociety.com' in host
+                        )
+                        
+                        # DEBUG LOGGING
+                        print(f"🔧 Origin: {origin}")
+                        print(f"🔧 Host: {host}")
+                        print(f"🔧 Is Production: {is_production}")
                         
                         # Create JSON response
                         response_data = {
@@ -373,68 +387,87 @@ class UserAPI:
                         }
                         resp = jsonify(response_data)
                         
-                        # Set cookie
+                        # Set cookie based on environment
+                        cookie_name = current_app.config["JWT_TOKEN_NAME"]
+                        
                         if is_production:
+                            # PRODUCTION: Must use Secure=True with SameSite=None
                             resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
+                                cookie_name,
                                 token,
-                                max_age=43200,  # 12 hours in seconds
-                                secure=True,
+                                max_age=43200,
+                                secure=True,       # REQUIRED for SameSite=None
                                 httponly=True,
                                 path='/',
-                                samesite='None'
+                                samesite='None'    # REQUIRED for cross-origin
                             )
+                            print(f"🍪 PRODUCTION cookie set: Secure=True, SameSite=None")
                         else:
+                            # DEVELOPMENT: Localhost
                             resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
+                                cookie_name,
                                 token,
-                                max_age=43200,  # 12 hours in seconds
+                                max_age=43200,
                                 secure=False,
-                                httponly=True,  # Set to True for more security if JS access not needed
+                                httponly=True,
                                 path='/',
                                 samesite='Lax'
                             )
-                        print(f"Token set: {token}")
-                        return resp 
+                            print(f"🍪 DEVELOPMENT cookie set: Secure=False, SameSite=Lax")
+                        
+                        return resp
+                        
                     except Exception as e:
+                        print(f"❌ Error in login: {e}")
                         return {
-                                        "error": "Something went wrong",
-                                        "message": str(e)
-                                    }, 500
+                            "error": "Something went wrong",
+                            "message": str(e)
+                        }, 500
                 return {
-                                "message": "Error fetching auth token!",
-                                "data": None,
-                                "error": "Unauthorized"
-                            }, 404
+                    "message": "Error fetching auth token!",
+                    "data": None,
+                    "error": "Unauthorized"
+                }, 404
             except Exception as e:
-                 return {
-                                "message": "Something went wrong!",
-                                "error": str(e),
-                                "data": None
-                            }, 500
-                 
+                print(f"❌ Exception in login: {e}")
+                return {
+                    "message": "Something went wrong!",
+                    "error": str(e),
+                    "data": None
+                }, 500
+        
         @token_required()
         def delete(self):
-            ''' Invalidate the current user's token by setting its expiry to 0 '''
+            '''Invalidate the current user's token'''
             current_user = g.current_user
             try:
-                # Generate a token with practically 0 age
                 token = jwt.encode(
                     {"_uid": current_user._uid, 
-                     "exp": datetime.utcnow()},
+                    "exp": datetime.utcnow()},
                     current_app.config["SECRET_KEY"],
                     algorithm="HS256"
                 )
-                # You might want to log this action or take additional steps here
                 
-                # Prepare a response indicating the token has been invalidated
                 resp = Response("Token invalidated successfully")
-                is_production = not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+                
+                # Same production detection
+                origin = request.headers.get('Origin', '')
+                host = request.host
+                
+                is_production = (
+                    'interacters.github.io' in origin or
+                    'opencodingsociety.com' in origin or
+                    'open-coding-society.github.io' in origin or
+                    'essaylab.opencodingsociety.com' in host
+                )
+                
+                cookie_name = current_app.config["JWT_TOKEN_NAME"]
+                
                 if is_production:
                     resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
+                        cookie_name,
                         token,
-                        max_age=0,  # Immediately expire the cookie
+                        max_age=0,
                         secure=True,
                         httponly=True,
                         path='/',
@@ -442,21 +475,22 @@ class UserAPI:
                     )
                 else:
                     resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
+                        cookie_name,
                         token,
-                        max_age=0,  # Immediately expire the cookie
+                        max_age=0,
                         secure=False,
-                        httponly=True,  # Set to True for more security if JS access not needed
+                        httponly=True,
                         path='/',
                         samesite='Lax'
                     )
+                
+                print(f"🍪 Cookie deleted")
                 return resp
             except Exception as e:
                 return {
                     "message": "Failed to invalidate token",
                     "error": str(e)
-                }, 500
-
+                }, 500   
     class _GradeData(Resource):
         """
         Grade data API operations
