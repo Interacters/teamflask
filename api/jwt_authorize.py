@@ -1,7 +1,6 @@
 from flask import request
 from flask import current_app, g
 from functools import wraps
-import flask
 import jwt
 from model.user import User
 
