@@ -683,6 +683,18 @@ class UserAPI:
 
             except Exception as e:
                 return {'message': f'Error creating guest user: {str(e)}'}, 500
+            
+    class _Debug(Resource):
+
+        def get(self):
+            return jsonify({
+                'cookies_received': dict(request.cookies),
+                'all_headers': dict(request.headers),
+                'origin': request.headers.get('Origin'),
+                'host': request.host,
+                'jwt_cookie_name_expected': current_app.config["JWT_TOKEN_NAME"],
+                'is_production': not (request.host.startswith('localhost') or request.host.startswith('127.0.0.1'))
+        })
 
     # building RESTapi endpoint
     api.add_resource(_ID, '/id')
@@ -694,6 +706,7 @@ class UserAPI:
     api.add_resource(_GradeData, '/grade_data')
     api.add_resource(_APExam, '/apexam')
     api.add_resource(_School, '/school')
+    api.add_resource(_Debug, '/debug')
     
     class _Class(Resource):
         """Manage the user's `class` list (e.g. CSSE, CSP, CSA).
