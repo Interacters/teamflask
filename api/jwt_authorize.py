@@ -1,6 +1,7 @@
 from flask import request
 from flask import current_app, g
 from functools import wraps
+import flask
 import jwt
 from model.user import User
 
@@ -22,13 +23,25 @@ def token_required(roles=None):
     def decorator(func_to_guard):
         @wraps(func_to_guard)
         def decorated(*args, **kwargs):
+            # DEBUG: Print all cookies
+            print(f"🔍 All cookies received: {dict(request.cookies)}")
+            print(f"🔍 Looking for cookie: {current_app.config['JWT_TOKEN_NAME']}")
+            
             token = request.cookies.get(current_app.config["JWT_TOKEN_NAME"])
+            
             if not token:
+                print(f"❌ Token NOT found in cookies!")
+                print(f"❌ Available cookies: {list(request.cookies.keys())}")
+                print(f"❌ Request origin: {request.headers.get('Origin')}")
+                print(f"❌ Request host: {request.host}")
                 return {
                     "message": "Authentication Token is missing!",
                     "data": None,
                     "error": "Unauthorized"
                 }, 401
+            
+            print(f"✅ Token found: {token[:20]}...")
+            
             try:
                 # Decode the token and retrieve the user data
                 data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
@@ -39,7 +52,7 @@ def token_required(roles=None):
                         "data": None,
                         "error": "Unauthorized"
                     }, 401
-                    
+                
                 # Check user has the required role, when role is required 
                 if roles and current_user.role not in roles:
                     return {
@@ -47,15 +60,13 @@ def token_required(roles=None):
                         "data": None,
                         "error": "Forbidden"
                     }, 403
-                    
+                
                 # Success finding user and (optional) role
-                # Set the current_user in the global context
-                # Flask's g object is a global object that lasts for the duration of the request
-                # The g.current_user can be referenced in decorated function 
                 g.current_user = current_user
+                print(f"✅ User authenticated: {current_user.uid}")
             
-            # Error exception is for unknown jwt.decode errors 
             except Exception as e:
+                print(f"❌ Token decode error: {e}")
                 return {
                     "message": "Something went wrong decoding the token!",
                     "data": None,
@@ -66,9 +77,6 @@ def token_required(roles=None):
             if request.method == 'OPTIONS':
                 return ('', 200)
 
-            # Success, return to the decorated function
-            # func_to_guard is the function with the @token_required
-            # func_to_guard returns with the original function arguments
             return func_to_guard(*args, **kwargs)
 
         return decorated
