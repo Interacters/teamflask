@@ -4,7 +4,7 @@ from datetime import datetime
 from __init__ import db
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-
+from api.jwt_authorize import token_required
 # ...existing imports above...
 from flask_restful import Api, Resource
 from flask_cors import CORS
@@ -13,7 +13,6 @@ from flask_cors import CORS
 # Create Blueprint
 media_api = Blueprint('media_api', __name__, url_prefix='/api/media')
 # Allow cross-origin requests from your frontend during development:
-CORS(media_api, resources={r"/*": {"origins": "http://localhost:4600"}})
 
 api = Api(media_api)
 
@@ -204,6 +203,28 @@ class MediaLeaderboardAPI(Resource):
             leaderboard.append(entry)
         
         return leaderboard, 200
+
+class MediaScoreDeleteAPI(Resource):
+    @token_required("Admin")    
+    def delete(self, score_id):
+            """
+            Delete a media score by ID
+            
+            URL: DELETE /api/media/score/<id>
+            """
+
+            score = MediaScore.query.get(score_id)
+            
+            if not score:
+                return {'message': f'Media score {score_id} not found'}, 404
+            
+            try:
+                db.session.delete(score)
+                db.session.commit()
+                return {'message': f'Media score {score_id} deleted successfully'}, 200
+            except Exception as e:
+                db.session.rollback()
+                return {'message': f'Error deleting score: {str(e)}'}, 500
     
 import requests
 from bs4 import BeautifulSoup
@@ -280,6 +301,7 @@ api.add_resource(MediaScoreAPI,
 api.add_resource(MediaLeaderboardAPI, 
                  '/leaderboard',  # New dedicated leaderboard endpoint
                  '/')  # Also accessible at /api/media/ for backward compatibility
+api.add_resource(MediaScoreDeleteAPI, '/<int:score_id>')
 
 # Register the media_api blueprint with the main Flask app
 from __init__ import app  # Make sure you have the app object imported
