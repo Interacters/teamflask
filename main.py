@@ -15,7 +15,6 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
-from api.promote_admin import promote_admin_api
 # Near the top with other imports (around line 20)
 
 # import "objects" from "this" project
