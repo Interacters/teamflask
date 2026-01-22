@@ -10,7 +10,6 @@ def initPerformances():
     it calls db.create_all() to be safe.
     """
     with current_app.app_context():
-        # Import here to avoid cycles at module import time
         from model.performance import Performance
         db.create_all()
         return True
@@ -46,20 +45,31 @@ def getAverageRating():
     return round(float(avg), 1)
 
 
-def addPerformance(rating, user_id=None, username=None):
+def addPerformance(rating, user_id):
     """
     Add a new performance record into the DB.
-    Returns a dict matching the old JSON entry structure (id, rating, user_id, username, timestamp)
+    Returns a dict with performance data including username from User relationship.
+    
+    Args:
+        rating: Integer rating 1-5
+        user_id: Required user ID (integer)
     """
     from model.performance import Performance
-    # Normalize inputs
+    
+    # Validate inputs
+    if user_id is None:
+        raise ValueError("user_id is required")
+    
     try:
         rating = int(rating)
     except Exception:
         raise ValueError("rating must be an integer")
+    
+    if rating not in [1, 2, 3, 4, 5]:
+        raise ValueError("rating must be between 1 and 5")
 
     # Create and persist
-    perf = Performance(rating=rating, user_id=user_id, username=username, timestamp=datetime.utcnow())
+    perf = Performance(rating=rating, user_id=user_id, timestamp=datetime.utcnow())
     perf.create()
     return perf.read()
 

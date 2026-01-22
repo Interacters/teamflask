@@ -3,7 +3,7 @@ from flask_restful import Api, Resource
 import traceback
 from api.jwt_authorize import token_required
 
-# Explicit imports of the DB-backed helper functions to avoid wildcard imports
+# Explicit imports of the DB-backed helper functions
 from hacks.performances import (
     addPerformance,
     getPerformances,
@@ -54,11 +54,10 @@ class PerformanceAPI:
                 if rating not in [1, 2, 3, 4, 5]:
                     return {'error': 'Invalid rating. Must be 1-5.'}, 400
                 
-                # Add the rating with user info (atomic operation with DB)
+                # Add the rating with user_id only (username will be fetched via relationship)
                 new_performance = addPerformance(
                     rating=rating, 
-                    user_id=current_user.id,
-                    username=current_user.uid
+                    user_id=current_user.id
                 )
                 
                 # Calculate average
@@ -84,6 +83,9 @@ class PerformanceAPI:
                     'username': current_user.uid
                 }, 200
                 
+            except ValueError as ve:
+                current_app.logger.error(f"Validation error in performance submit: {str(ve)}")
+                return {'error': str(ve)}, 400
             except Exception as e:
                 # Log the full error for debugging
                 current_app.logger.error(f"Error in performance submit: {str(e)}")
