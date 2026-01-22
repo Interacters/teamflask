@@ -2,6 +2,7 @@ from flask import Blueprint, request, current_app, g
 from flask_restful import Api, Resource
 import traceback
 from api.jwt_authorize import token_required
+from __init__ import db
 
 # Explicit imports of the DB-backed helper functions
 from hacks.performances import (
@@ -154,6 +155,57 @@ class PerformanceAPI:
             except Exception as e:
                 current_app.logger.error(f"Error counting performances: {str(e)}")
                 return {'error': str(e)}, 500
+    class  _Update(Resource):
+        """Update a performance rating - Admin only"""
+        @token_required("Admin")
+        def put(self, id):
+            try:
+                from model.performance import Performance
+                
+                data = request.get_json()
+                if not data:
+                    return {'error': 'No data provided'}, 400
+                
+                performance = Performance.query.get(id)
+                if not performance:
+                    return {'error': 'Performance not found'}, 404
+                
+                rating = data.get('rating')
+                if rating is not None:
+                    try:
+                        rating = int(rating)
+                        if rating not in [1, 2, 3, 4, 5]:
+                            return {'error': 'Invalid rating. Must be 1-5.'}, 400
+                        performance.rating = rating
+                    except (ValueError, TypeError):
+                        return {'error': 'Rating must be a number'}, 400
+                
+                db.session.commit()
+                return performance.read(), 200
+                
+            except Exception as e:
+                current_app.logger.error(f"Error updating performance: {str(e)}")
+                return {'error': str(e)}, 500
+
+    class _Delete(Resource):
+        """Delete a performance rating - Admin only"""
+        @token_required("Admin")
+        def delete(self, id):
+            try:
+                from model.performance import Performance
+                
+                performance = Performance.query.get(id)
+                if not performance:
+                    return {'error': 'Performance not found'}, 404
+                
+                db.session.delete(performance)
+                db.session.commit()
+                
+                return {'message': f'Performance {id} deleted successfully'}, 200
+                
+            except Exception as e:
+                current_app.logger.error(f"Error deleting performance: {str(e)}")
+                return {'error': str(e)}, 500
     
     # building RESTapi resources/interfaces, these routes are added to Web Server
     api.add_resource(_Submit, '/submit', '/submit/')
@@ -162,3 +214,5 @@ class PerformanceAPI:
     api.add_resource(_ReadUserPerformances, '/user/<int:user_id>', '/user/<int:user_id>/')
     api.add_resource(_ReadStats, '/stats', '/stats/')
     api.add_resource(_ReadCount, '/count', '/count/')
+    api.add_resource(_Update, '/<int:id>', '/<int:id>/')
+    api.add_resource(_Delete, '/<int:id>', '/<int:id>/')

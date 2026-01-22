@@ -4,6 +4,7 @@ from datetime import datetime
 from __init__ import db
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
+from api.jwt_authorize import token_required
 
 # ...existing imports above...
 from flask_restful import Api, Resource
@@ -205,6 +206,56 @@ class MediaLeaderboardAPI(Resource):
         
         return leaderboard, 200
     
+class MediaScoreUpdateAPI(Resource):
+    """Update media score - Admin only"""
+    
+    @token_required("Admin")
+    def put(self, score_id):
+        """Update a media score"""
+        try:
+            body = request.get_json()
+            
+            score = MediaScore.query.get(score_id)
+            if not score:
+                return {'message': 'Score not found'}, 404
+            
+            # Update fields if provided
+            if body.get('username'):
+                score.username = body.get('username')
+            if body.get('time') is not None:
+                try:
+                    score.time = int(body.get('time'))
+                except (ValueError, TypeError):
+                    return {'message': 'Time must be an integer'}, 400
+            
+            db.session.commit()
+            return score.read(), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Error updating score: {str(e)}'}, 500
+
+class MediaScoreDeleteAPI(Resource):
+    """Delete media score - Admin only"""
+    
+    @token_required("Admin")
+    def delete(self, score_id):
+        """Delete a media score"""
+        try:
+            score = MediaScore.query.get(score_id)
+            if not score:
+                return {'message': 'Score not found'}, 404
+            
+            db.session.delete(score)
+            db.session.commit()
+            
+            return {'message': f'Score {score_id} deleted successfully'}, 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Error deleting score: {str(e)}'}, 500
+
+    
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -280,6 +331,7 @@ api.add_resource(MediaScoreAPI,
 api.add_resource(MediaLeaderboardAPI, 
                  '/leaderboard',  # New dedicated leaderboard endpoint
                  '/')  # Also accessible at /api/media/ for backward compatibility
-
+api.add_resource(MediaScoreUpdateAPI, '/score/update/<int:score_id>')
+api.add_resource(MediaScoreDeleteAPI, '/score/delete/<int:score_id>')
 # Register the media_api blueprint with the main Flask app
 from __init__ import app  # Make sure you have the app object imported
