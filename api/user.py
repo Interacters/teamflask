@@ -201,10 +201,10 @@ class UserAPI:
             else:
                 # Non-admin trying to update someone else
                 if body.get('uid') and body.get('uid') != current_user.uid:
-                    return {'message': 'Permission denied'}, 403  # ✅ ADD THIS CHECK
+                    return {'message': 'Permission denied'}, 403
                 user = current_user
-                
-            # Accounts are desired to be GitHub accounts, change must be validated 
+            
+            # ✅ ONLY validate GitHub if the UID is ACTUALLY CHANGING
             if body.get('uid') and body.get('uid') != user._uid:
                 _, status = GitHubUser().get(body.get('uid'))
                 if status != 200:
@@ -216,7 +216,7 @@ class UserAPI:
             # return response, the updated user details as a JSON object
             return jsonify(user.read())
         
-        @token_required("Admin")
+        @token_required(["Admin"])
         def delete(self):
             """
             Delete a user.
