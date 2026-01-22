@@ -410,7 +410,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for user in user_data %}
+  {% if user.id == current_user.id or current_user.role == 'Admin' %}
                 <tr id="user-{{ user.id }}">
                     <td><strong>{{ user.id }}</strong></td>
                     <td><code>{{ user.uid }}</code></td>
@@ -459,6 +459,7 @@
                         {% endif %}
                     </td>
                 </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
