@@ -14,7 +14,6 @@ from flask_cors import CORS
 # Create Blueprint
 media_api = Blueprint('media_api', __name__, url_prefix='/api/media')
 # Allow cross-origin requests from your frontend during development:
-CORS(media_api, resources={r"/*": {"origins": "http://localhost:4600"}})
 
 api = Api(media_api)
 

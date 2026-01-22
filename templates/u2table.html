@@ -598,40 +598,42 @@
     }
 
     // Edit user role
-    async function editUserRole(userId) {
-        const currentRole = prompt('Enter new role (Admin, Teacher, or User):');
-        if (!currentRole) return;
-        
-        const validRoles = ['Admin', 'Teacher', 'User'];
-        if (!validRoles.includes(currentRole)) {
-            alert('Invalid role. Must be Admin, Teacher, or User.');
-            return;
-        }
-        
-        try {
-            const response = await fetch('/api/user', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',  // ADD THIS
-                body: JSON.stringify({
-                    uid: userUid,
-                    role: currentRole
-                })
-            });
-
-            const data = await response.json();
-            
-            if (!response.ok) throw new Error('Failed to update role');
-            
-            alert(`Role updated successfully to ${currentRole}`);
-            location.reload();
-        } catch (error) {
-            console.error('Error updating role:', error);
-            alert('Error updating role');
-        }
+    async function editUserRole(userId, userUid) {  // ✅ Accept BOTH parameters
+    const currentRole = prompt('Enter new role (Admin, Teacher, or User):');
+    if (!currentRole) return;
+    
+    const validRoles = ['Admin', 'Teacher', 'User'];
+    if (!validRoles.includes(currentRole)) {
+        alert('Invalid role. Must be Admin, Teacher, or User.');
+        return;
     }
+    
+    try {
+        const response = await fetch('/api/user', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                uid: userUid,  // ✅ Now userUid is defined
+                role: currentRole
+            })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to update role');
+        }
+        
+        alert(`Role updated successfully to ${currentRole}`);
+        location.reload();
+    } catch (error) {
+        console.error('Error updating role:', error);
+        alert('Error updating role: ' + error.message);
+    }
+}
 
 // Delete performance rating
     async function deletePerformance(perfId) {
@@ -708,17 +710,21 @@
                 credentials: 'include'
             });
             
-            if (!response.ok) throw new Error('Failed to delete score');
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to delete score');
+            }
             
             alert('Media score deleted successfully');
-            loadMediaData(); // Reload the table
+            loadMediaData();
         } catch (error) {
             console.error('Error deleting media score:', error);
-            alert('Error deleting media score');
+            alert('Error deleting media score: ' + error.message);
         }
     }
 
-    // Edit media score
+    // Edit media score - FIXED VERSION
     async function editMediaScore(scoreId, currentUsername, currentTime) {
         const newUsername = prompt(`Enter new username. Current: ${currentUsername}`, currentUsername);
         if (!newUsername) return;
@@ -745,13 +751,17 @@
                 })
             });
             
-            if (!response.ok) throw new Error('Failed to update score');
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update score');
+            }
             
             alert('Media score updated successfully');
-            loadMediaData(); // Reload the table
+            loadMediaData();
         } catch (error) {
             console.error('Error updating media score:', error);
-            alert('Error updating media score');
+            alert('Error updating media score: ' + error.message);
         }
     }
     // Load media scores data
