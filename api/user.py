@@ -827,60 +827,7 @@ class UserAPI:
 
             user.update({'class': classes})
             return jsonify({'uid': user.uid, 'class': user._class})
-        
-    class _Role(Resource):
-
-        @token_required("Admin")
-        def put(self):
-            """
-            Update a user's role (Admin only)
-            
-            Expected JSON body:
-            {
-                "uid": "github-username",
-                "role": "Admin" or "Teacher" or "User"
-            }
-            """
-            body = request.get_json()
-            
-            if not body:
-                return {'message': 'Request body is required'}, 400
-            
-            uid = body.get('uid')
-            new_role = body.get('role')
-            
-            if not uid:
-                return {'message': 'UID is required'}, 400
-            
-            if not new_role:
-                return {'message': 'Role is required'}, 400
-            
-            # Validate role
-            valid_roles = ['Admin', 'Teacher', 'User']
-            if new_role not in valid_roles:
-                return {'message': f'Invalid role. Must be one of: {", ".join(valid_roles)}'}, 400
-            
-            # Find the user
-            user = User.query.filter_by(_uid=uid).first()
-            
-            if not user:
-                return {'message': f'User {uid} not found'}, 404
-            
-            # Update the role
-            old_role = user.role
-            user.update({'role': new_role})
-            
-            return {
-                'message': f'Successfully updated {user.name} from {old_role} to {new_role}',
-                'user': {
-                    'uid': user.uid,
-                    'name': user.name,
-                    'role': user.role,
-                    'email': user.email
-                }
-            }, 200
 
 
 
     api.add_resource(_Class, '/user/class')
-    api.add_resource(_Role, '/user/role')

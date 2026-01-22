@@ -371,17 +371,6 @@
         font-size: 1rem;
         color: var(--primary);
     }
-
-    .btn-promote {
-        background: #059669;
-        color: white;
-    }
-
-    .btn-promote:hover {
-        background: #047857;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
 </style>
 
 <div class="dashboard-container">
@@ -461,19 +450,12 @@
                             Edit
                         </button>
                         {% if current_user.role == 'Admin' %}
-                            {% if user.role != 'Admin' %}
-                            <button class="action-btn btn-promote promote-admin-btn" 
-                                    data-uid="{{ user.uid }}" 
-                                    data-name="{{ user.name }}">
-                                Make Admin
-                            </button>
-                            {% endif %}
-                            <button class="action-btn btn-delete delete-btn" data-id="{{ user.id }}">
-                                Delete
-                            </button>
-                            <button class="action-btn btn-reset reset-password-btn" data-id="{{ user.id }}">
-                                Reset
-                            </button>
+                        <button class="action-btn btn-delete delete-btn" data-id="{{ user.id }}">
+                            Delete
+                        </button>
+                        <button class="action-btn btn-reset reset-password-btn" data-id="{{ user.id }}">
+                            Reset
+                        </button>
                         {% endif %}
                     </td>
                 </tr>
@@ -816,37 +798,6 @@
                 .catch(error => {
                     console.error("Error resetting password:", error);
                     alert("Error resetting password.");
-                });
-            });
-        });
-        document.querySelectorAll(".promote-admin-btn").forEach(button => {
-            button.addEventListener("click", function () {
-                const uid = this.dataset.uid;
-                const name = this.dataset.name;
-                
-                if (!confirm(`Are you sure you want to make ${name} an Admin?`)) return;
-
-                fetch(`/api/user/role`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        uid: uid,
-                        role: "Admin"
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) {
-                        alert(data.message);
-                        location.reload(); // Reload to see the updated role
-                    } else {
-                        alert("User promoted to Admin successfully!");
-                        location.reload();
-                    }
-                })
-                .catch(error => {
-                    console.error("Error promoting user:", error);
-                    alert("Error promoting user to Admin.");
                 });
             });
         });
