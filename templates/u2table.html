@@ -371,6 +371,18 @@
         font-size: 1rem;
         color: var(--primary);
     }
+
+    .user-link {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+
+    .user-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -486,10 +498,10 @@
         <table class="table table-striped" id="performanceTable">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Performance ID</th>
+                    <th>User ID</th>
                     <th>Username</th>
                     <th>Rating</th>
-                    <th>User ID</th>
                     <th>Timestamp</th>
                 </tr>
             </thead>
@@ -552,6 +564,7 @@
     let userTableInstance;
     let performanceTableInstance;
     let mediaTableInstance;
+    let usersMap = {}; // Store user ID to username mapping
 
     // Tab switching
     function switchTab(tabName) {
@@ -669,12 +682,19 @@
             } else {
                 performances.forEach(perf => {
                     const stars = '★'.repeat(perf.rating) + '☆'.repeat(5 - perf.rating);
+                    const username = perf.username || 'Unknown User';
+                    
+                    // Create clickable username if user exists
+                    const usernameDisplay = perf.user_id 
+                        ? `<a href="#" class="user-link" onclick="scrollToUser(${perf.user_id}); return false;">${username}</a>`
+                        : `<span style="color: var(--gray-600);">${username}</span>`;
+                    
                     const row = `
                         <tr>
                             <td><strong>${perf.id}</strong></td>
-                            <td><code>${perf.username || 'Anonymous'}</code></td>
+                            <td><strong>${perf.user_id || '-'}</strong></td>
+                            <td><code>${usernameDisplay}</code></td>
                             <td><span class="rating-stars">${stars}</span> <strong>${perf.rating}/5</strong></td>
-                            <td>${perf.user_id || '-'}</td>
                             <td>${new Date(perf.timestamp).toLocaleString()}</td>
                         </tr>
                     `;
@@ -686,7 +706,7 @@
                     performanceTableInstance.destroy();
                 }
                 performanceTableInstance = $('#performanceTable').DataTable({
-                    order: [[0, 'desc']],
+                    order: [[0, 'desc']], // Sort by Performance ID descending (most recent first)
                     pageLength: 25
                 });
             }
@@ -695,6 +715,25 @@
             document.getElementById('performanceTableBody').innerHTML = 
                 '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #dc2626;">Error loading data</td></tr>';
         }
+    }
+
+    // Function to scroll to a user in the users table
+    function scrollToUser(userId) {
+        // Switch to users tab
+        switchTab('users');
+        
+        // Wait for tab switch animation
+        setTimeout(() => {
+            const userRow = document.getElementById(`user-${userId}`);
+            if (userRow) {
+                userRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Highlight the row briefly
+                userRow.style.backgroundColor = '#fef3c7';
+                setTimeout(() => {
+                    userRow.style.backgroundColor = '';
+                }, 2000);
+            }
+        }, 300);
     }
 
     $(document).ready(function () {
