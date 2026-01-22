@@ -82,7 +82,6 @@ app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
 app.register_blueprint(microblog_api)
 app.register_blueprint(performance_api)
-app.register_blueprint(promote_admin_api)
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
