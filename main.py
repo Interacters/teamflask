@@ -15,6 +15,7 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
+import jwt 
 # Near the top with other imports (around line 20)
 
 # import "objects" from "this" project
@@ -260,7 +261,6 @@ def kasm_users():
             message=f"Error connecting to KASM API: {str(e)}"
         ), 500
         
-        
 @app.route('/delete_user/<user_id>', methods=['DELETE'])
 def delete_user_kasm(user_id):
     if current_user.role != 'Admin':
@@ -315,8 +315,97 @@ def update_user(uid):
         return jsonify({"message": "User updated successfully."}), 200
     else:
         print("User not found.")  # Log when user is not found
-        return jsonify({"message": "User not found."}), 404
+        return jsonify({"message": "User not found."}), 404        
+# Add these admin API routes after your existing routes
 
+@app.route('/api/admin/update_user', methods=['PUT'])
+@login_required
+def admin_update_user():
+    """Admin-only user update using Flask-Login session"""
+    if current_user.role != 'Admin':
+        return jsonify({'message': 'Admin access required'}), 403
+    
+    body = request.get_json()
+    uid = body.get('uid')
+    
+    user = User.query.filter_by(_uid=uid).first()
+    if not user:
+        return jsonify({'message': f'User {uid} not found'}), 404
+    
+    # Only validate GitHub if UID is changing
+    if body.get('uid') and body.get('uid') != user._uid:
+        _, status = GitHubUser().get(body.get('uid'))
+        if status != 200:
+            return jsonify({'message': f'User ID {body.get("uid")} not a valid GitHub account'}), 404
+    
+    user.update(body)
+    return jsonify(user.read())
+
+
+@app.route('/api/admin/performance/<int:perf_id>', methods=['PUT', 'DELETE'])
+@login_required
+def admin_performance(perf_id):
+    """Admin-only performance update/delete"""
+    if current_user.role != 'Admin':
+        return jsonify({'message': 'Admin access required'}), 403
+    
+    from model.performance import Performance
+    
+    performance = Performance.query.get(perf_id)
+    if not performance:
+        return jsonify({'error': 'Performance not found'}), 404
+    
+    if request.method == 'PUT':
+        body = request.get_json()
+        rating = body.get('rating')
+        if rating is not None:
+            try:
+                rating = int(rating)
+                if rating not in [1, 2, 3, 4, 5]:
+                    return jsonify({'error': 'Invalid rating. Must be 1-5.'}), 400
+                performance.rating = rating
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Rating must be a number'}), 400
+        
+        db.session.commit()
+        return jsonify(performance.read()), 200
+    
+    elif request.method == 'DELETE':
+        db.session.delete(performance)
+        db.session.commit()
+        return jsonify({'message': f'Performance {perf_id} deleted successfully'}), 200
+
+
+@app.route('/api/admin/media/<int:score_id>', methods=['PUT', 'DELETE'])
+@login_required
+def admin_media(score_id):
+    """Admin-only media score update/delete"""
+    if current_user.role != 'Admin':
+        return jsonify({'message': 'Admin access required'}), 403
+    
+    from api.media_api import MediaScore
+    
+    score = MediaScore.query.get(score_id)
+    if not score:
+        return jsonify({'message': 'Score not found'}), 404
+    
+    if request.method == 'PUT':
+        body = request.get_json()
+        if body.get('username'):
+            score.username = body.get('username')
+        if body.get('time') is not None:
+            try:
+                score.time = int(body.get('time'))
+            except (ValueError, TypeError):
+                return jsonify({'message': 'Time must be an integer'}), 400
+        
+        db.session.commit()
+        return jsonify(score.read()), 200
+    
+    elif request.method == 'DELETE':
+        db.session.delete(score)
+        db.session.commit()
+        return jsonify({'message': f'Score {score_id} deleted successfully'}), 200
 
 
     
