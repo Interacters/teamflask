@@ -265,29 +265,32 @@ def kasm_users():
 @app.route('/update_user/<string:uid>', methods=['PUT'])
 @login_required
 def update_user(uid):
-    # Authorization check
     if current_user.role != 'Admin':
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # Get the JSON data from the request
     data = request.get_json()
-    print(f"Request Data: {data}")
+    print(f"🔧 Request Data: {data}")
 
-    # Find the user in the database
     user = User.query.filter_by(_uid=uid).first()
-    if user:
-        print(f"Found user: {user.uid}")
-        
-        # Update the user using the provided data
-        user.update(data)
-        
-        # CRITICAL: Actually commit to database
-        db.session.commit()
-        
-        return jsonify({"message": "User updated successfully.", "user": user.read()}), 200
-    else:
-        print("User not found.")
+    if not user:
         return jsonify({"message": "User not found."}), 404
+    
+    print(f"🔧 Found user: {user.uid}, current role: {user.role}")
+    
+    # Directly set the role attribute (bypass the update method)
+    if 'role' in data:
+        user._role = data['role']
+        print(f"🔧 Setting role to: {data['role']}")
+    
+    # Commit the change
+    try:
+        db.session.commit()
+        print(f"🔧 Committed! New role: {user.role}")
+        return jsonify({"message": "User updated successfully.", "new_role": user.role}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/admin/performance/<int:perf_id>', methods=['PUT', 'DELETE'])
@@ -355,6 +358,34 @@ def admin_media(score_id):
         db.session.delete(score)
         db.session.commit()
         return jsonify({'message': f'Score {score_id} deleted successfully'}), 200
+    
+@app.route('/debug/check-user/<string:uid>')
+@login_required
+def check_user(uid):
+    user = User.query.filter_by(_uid=uid).first()
+    if not user:
+        return jsonify({"error": "Not found"}), 404
+    
+    # Direct SQL query to see what's actually in the database
+    result = db.session.execute(
+        db.text("SELECT id, _uid, _name, _role FROM users WHERE _uid = :uid"),
+        {"uid": uid}
+    ).fetchone()
+    
+    return jsonify({
+        "from_model": {
+            "uid": user.uid,
+            "name": user.name,
+            "role": user.role,
+            "_role": user._role
+        },
+        "from_raw_sql": {
+            "id": result[0] if result else None,
+            "uid": result[1] if result else None,
+            "name": result[2] if result else None,
+            "role": result[3] if result else None
+        }
+    })
 
     
 # Create an AppGroup for custom commands
