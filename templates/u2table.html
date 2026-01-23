@@ -118,7 +118,6 @@
         border-bottom: 2px solid var(--gray-200);
     }
 
-    /* DataTables Customization */
     .dataTables_wrapper {
         font-family: inherit;
     }
@@ -508,7 +507,7 @@
             </thead>
             <tbody id="performanceTableBody">
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
                         <div class="loading-spinner">Loading performance data...</div>
                     </td>
                 </tr>
@@ -548,7 +547,7 @@
             </thead>
             <tbody id="mediaTableBody">
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
                         <div class="loading-spinner">Loading media scores...</div>
                     </td>
                 </tr>
@@ -557,7 +556,6 @@
     </div>
 </div>
 
-<!-- jQuery, DataTables, and Bootstrap -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -566,23 +564,19 @@
     let userTableInstance;
     let performanceTableInstance;
     let mediaTableInstance;
-    let usersMap = {}; // Store user ID to username mapping
 
     // Tab switching
     function switchTab(tabName) {
-        // Update button states
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         event.target.classList.add('active');
 
-        // Show/hide tables
         document.querySelectorAll('.table-card').forEach(card => {
             card.classList.remove('active');
         });
         document.getElementById(`${tabName}-table`).classList.add('active');
 
-        // Load data if switching to that tab
         if (tabName === 'performance' && !performanceTableInstance) {
             loadPerformanceData();
         } else if (tabName === 'media' && !mediaTableInstance) {
@@ -597,55 +591,55 @@
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // Edit user role
-    async function editUserRole(userId, userUid) {  // ✅ Accept BOTH parameters
-    const currentRole = prompt('Enter new role (Admin, Teacher, or User):');
-    if (!currentRole) return;
-    
-    const validRoles = ['Admin', 'Teacher', 'User'];
-    if (!validRoles.includes(currentRole)) {
-        alert('Invalid role. Must be Admin, Teacher, or User.');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/admin/update_user', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                uid: userUid,  // ✅ Now userUid is defined
-                role: currentRole
-            })
-        });
-
-        const data = await response.json();
+    // Edit user role - FIXED VERSION
+    async function editUserRole(userId, userUid) {
+        const currentRole = prompt('Enter new role (Admin, Teacher, or User):');
+        if (!currentRole) return;
         
-        if (!response.ok) {
-            throw new Error(data.message || 'Failed to update role');
+        const validRoles = ['Admin', 'Teacher', 'User'];
+        if (!validRoles.includes(currentRole)) {
+            alert('Invalid role. Must be Admin, Teacher, or User.');
+            return;
         }
         
-        alert(`Role updated successfully to ${currentRole}`);
-        location.reload();
-    } catch (error) {
-        console.error('Error updating role:', error);
-        alert('Error updating role: ' + error.message);
-    }
-}
+        try {
+            const response = await fetch('/api/user', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    uid: userUid,
+                    role: currentRole
+                })
+            });
 
-// Delete performance rating
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update role');
+            }
+            
+            alert(`Role updated successfully to ${currentRole}`);
+            location.reload();
+        } catch (error) {
+            console.error('Error updating role:', error);
+            alert('Error updating role: ' + error.message);
+        }
+    }
+
+    // Delete performance rating
     async function deletePerformance(perfId) {
         if (!confirm('Are you sure you want to delete this performance rating?')) return;
         
         try {
-            const response = await fetch(`/api/admin/performance/${perfId}`, {  // Changed endpoint
+            const response = await fetch(`/api/performance/${perfId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include'  // ADD THIS
+                credentials: 'include'
             });
             
             const data = await response.json();
@@ -655,7 +649,7 @@
             }
             
             alert('Performance rating deleted successfully');
-            loadPerformanceData(); // Reload the table
+            loadPerformanceData();
         } catch (error) {
             console.error('Error deleting performance:', error);
             alert('Error deleting performance rating: ' + error.message);
@@ -674,12 +668,12 @@
         }
         
         try {
-            const response = await fetch(`/api/admin/performance/${perfId}`, {
+            const response = await fetch(`/api/performance/${perfId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include',  // ADD THIS
+                credentials: 'include',
                 body: JSON.stringify({ rating: rating })
             });
             
@@ -690,19 +684,19 @@
             }
             
             alert('Performance rating updated successfully');
-            loadPerformanceData(); // Reload the table
+            loadPerformanceData();
         } catch (error) {
             console.error('Error updating performance:', error);
             alert('Error updating performance rating: ' + error.message);
         }
     }
 
-        // Delete media score
+    // Delete media score
     async function deleteMediaScore(scoreId) {
         if (!confirm('Are you sure you want to delete this media score?')) return;
         
         try {
-            const response = await fetch(`/api/admin/media/${scoreId}`, {
+            const response = await fetch(`/api/media/score/delete/${scoreId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -724,7 +718,7 @@
         }
     }
 
-    // Edit media score - FIXED VERSION
+    // Edit media score
     async function editMediaScore(scoreId, currentUsername, currentTime) {
         const newUsername = prompt(`Enter new username. Current: ${currentUsername}`, currentUsername);
         if (!newUsername) return;
@@ -739,7 +733,7 @@
         }
         
         try {
-            const response = await fetch(`/api/admin/media/${scoreId}`, {
+            const response = await fetch(`/api/media/score/update/${scoreId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -764,10 +758,10 @@
             alert('Error updating media score: ' + error.message);
         }
     }
+
     // Load media scores data
     async function loadMediaData() {
         try {
-            // Fetch leaderboard data
             const response = await fetch('/api/media/leaderboard');
             const leaderboard = await response.json();
 
@@ -780,7 +774,6 @@
                 document.getElementById('bestTime').textContent = '-';
                 document.getElementById('avgTime').textContent = '-';
             } else {
-                // Calculate stats
                 const totalPlayers = leaderboard.length;
                 const bestTime = leaderboard[0].time;
                 const avgTime = Math.round(leaderboard.reduce((sum, entry) => sum + entry.time, 0) / totalPlayers);
@@ -789,7 +782,6 @@
                 document.getElementById('bestTime').textContent = formatTime(bestTime);
                 document.getElementById('avgTime').textContent = formatTime(avgTime);
 
-                // Populate table
                 leaderboard.forEach(entry => {
                     let rankClass = 'rank-other';
                     if (entry.rank === 1) rankClass = 'rank-1';
@@ -820,12 +812,11 @@
                     tbody.innerHTML += row;
                 });
 
-                // Initialize DataTable for media scores
                 if (mediaTableInstance) {
                     mediaTableInstance.destroy();
                 }
                 mediaTableInstance = $('#mediaTable').DataTable({
-                    order: [[0, 'asc']], // Sort by rank
+                    order: [[0, 'asc']],
                     pageLength: 25
                 });
             }
@@ -839,7 +830,6 @@
     // Load performance data
     async function loadPerformanceData() {
         try {
-            // Fetch stats
             const statsResponse = await fetch('/api/performance/stats');
             const stats = await statsResponse.json();
             
@@ -847,7 +837,6 @@
             document.getElementById('avgRating').textContent = (stats.average || 0).toFixed(1);
             document.getElementById('mostCommon').textContent = stats.most_common || '-';
 
-            // Fetch all performances
             const perfResponse = await fetch('/api/performance/');
             const performances = await perfResponse.json();
 
@@ -861,7 +850,6 @@
                     const stars = '★'.repeat(perf.rating) + '☆'.repeat(5 - perf.rating);
                     const username = perf.username || 'Unknown User';
                     
-                    // Create clickable username if user exists
                     const usernameDisplay = perf.user_id 
                         ? `<a href="#" class="user-link" onclick="scrollToUser(${perf.user_id}); return false;">${username}</a>`
                         : `<span style="color: var(--gray-600);">${username}</span>`;
@@ -886,12 +874,11 @@
                     tbody.innerHTML += row;
                 });
 
-                // Initialize DataTable for performance
                 if (performanceTableInstance) {
                     performanceTableInstance.destroy();
                 }
                 performanceTableInstance = $('#performanceTable').DataTable({
-                    order: [[0, 'desc']], // Sort by Performance ID descending (most recent first)
+                    order: [[0, 'desc']],
                     pageLength: 25
                 });
             }
@@ -902,17 +889,14 @@
         }
     }
 
-    // Function to scroll to a user in the users table
+    // Scroll to user in users table
     function scrollToUser(userId) {
-        // Switch to users tab
         switchTab('users');
         
-        // Wait for tab switch animation
         setTimeout(() => {
             const userRow = document.getElementById(`user-${userId}`);
             if (userRow) {
                 userRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Highlight the row briefly
                 userRow.style.backgroundColor = '#fef3c7';
                 setTimeout(() => {
                     userRow.style.backgroundColor = '';
@@ -983,7 +967,7 @@
 
         processUsersWithDelay();
 
-        // Edit user (now includes role editing)
+        // Edit user
         document.querySelectorAll(".edit-btn").forEach(button => {
             button.addEventListener("click", function () {
                 const id = this.dataset.id;
