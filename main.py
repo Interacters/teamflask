@@ -53,7 +53,7 @@ from hacks.jokes import initJokes
 from api.chat_api import chat_api
 from api.thesis_api import thesis_api
 from flask_cors import CORS
-
+from api.bias_analysis_api import bias_analysis_api
 
 # from model.announcement import Announcement ##temporary revert
 
@@ -95,9 +95,7 @@ app.register_blueprint(post_api)  # Register the social media post API
 app.register_blueprint(media_api)
 app.register_blueprint(chat_api)
 app.register_blueprint(thesis_api)
-#MY PROMPTS REGISTering
-app.register_blueprint(prompt_api)
-
+app.register_blueprint(bias_analysis_api)
 # Jokes file initialization
 with app.app_context():
     initJokes()
