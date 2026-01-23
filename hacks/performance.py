@@ -99,7 +99,6 @@ class PerformanceAPI:
     
     class _Read(Resource):
         """Get all performance ratings"""
-        @token_required()
         def get(self):
             try:
                 return getPerformances()
