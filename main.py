@@ -161,7 +161,6 @@ def index():
     return render_template("index.html")
 
 
-
 @app.route('/users/table2')
 @login_required
 def u2table():
@@ -260,40 +259,11 @@ def kasm_users():
             'error.html', 
             message=f"Error connecting to KASM API: {str(e)}"
         ), 500
-        
-@app.route('/delete_user/<user_id>', methods=['DELETE'])
-def delete_user_kasm(user_id):
-    if current_user.role != 'Admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    SERVER = current_app.config.get('KASM_SERVER')
-    API_KEY = current_app.config.get('KASM_API_KEY')
-    API_KEY_SECRET = current_app.config.get('KASM_API_KEY_SECRET')
 
-    if not SERVER or not API_KEY or not API_KEY_SECRET:
-        return {'message': 'KASM keys are missing'}, 400
-
-    try:
-        # Kasm API to delete a user
-        url = f"{SERVER}/api/public/delete_user"
-        data = {
-            "api_key": API_KEY,
-            "api_key_secret": API_KEY_SECRET,
-            "target_user": {"user_id": user_id},
-            "force": False
-        }
-        response = requests.post(url, json=data)
-
-        if response.status_code == 200:
-            return {'message': 'User deleted successfully'}, 200
-        else:
-            return {'message': 'Failed to delete user'}, response.status_code
-
-    except requests.RequestException as e:
-        return {'message': 'Error connecting to KASM API', 'error': str(e)}, 500
-
+# Replace the existing admin routes in main.py with these corrected versions:
 
 @app.route('/update_user/<string:uid>', methods=['PUT'])
+@login_required
 def update_user(uid):
     # Authorization check
     if current_user.role != 'Admin':
@@ -301,51 +271,29 @@ def update_user(uid):
 
     # Get the JSON data from the request
     data = request.get_json()
-    print(f"Request Data: {data}")  # Log the incoming data
+    print(f"Request Data: {data}")
 
     # Find the user in the database
     user = User.query.filter_by(_uid=uid).first()
     if user:
-        print(f"Found user: {user.uid}")  # Log the found user's UID
+        print(f"Found user: {user.uid}")
         
         # Update the user using the provided data
-        user.update(data)  # Assuming `user.update(data)` is a method on your User model
+        user.update(data)
         
-        # Save changes to the database
-        return jsonify({"message": "User updated successfully."}), 200
+        # CRITICAL: Actually commit to database
+        db.session.commit()
+        
+        return jsonify({"message": "User updated successfully.", "user": user.read()}), 200
     else:
-        print("User not found.")  # Log when user is not found
-        return jsonify({"message": "User not found."}), 404        
-# Add these admin API routes after your existing routes
-
-@app.route('/api/admin/update_user', methods=['PUT'])
-@login_required
-def admin_update_user():
-    """Admin-only user update using Flask-Login session"""
-    if current_user.role != 'Admin':
-        return jsonify({'message': 'Admin access required'}), 403
-    
-    body = request.get_json()
-    uid = body.get('uid')
-    
-    user = User.query.filter_by(_uid=uid).first()
-    if not user:
-        return jsonify({'message': f'User {uid} not found'}), 404
-    
-    # Only validate GitHub if UID is changing
-    if body.get('uid') and body.get('uid') != user._uid:
-        _, status = GitHubUser().get(body.get('uid'))
-        if status != 200:
-            return jsonify({'message': f'User ID {body.get("uid")} not a valid GitHub account'}), 404
-    
-    user.update(body)
-    return jsonify(user.read())
+        print("User not found.")
+        return jsonify({"message": "User not found."}), 404
 
 
 @app.route('/api/admin/performance/<int:perf_id>', methods=['PUT', 'DELETE'])
 @login_required
 def admin_performance(perf_id):
-    """Admin-only performance update/delete"""
+    """Admin-only performance update/delete using Flask-Login"""
     if current_user.role != 'Admin':
         return jsonify({'message': 'Admin access required'}), 403
     
@@ -379,10 +327,11 @@ def admin_performance(perf_id):
 @app.route('/api/admin/media/<int:score_id>', methods=['PUT', 'DELETE'])
 @login_required
 def admin_media(score_id):
-    """Admin-only media score update/delete"""
+    """Admin-only media score update/delete using Flask-Login"""
     if current_user.role != 'Admin':
         return jsonify({'message': 'Admin access required'}), 403
     
+    # Import MediaScore from the correct location
     from api.media_api import MediaScore
     
     score = MediaScore.query.get(score_id)
@@ -406,7 +355,6 @@ def admin_media(score_id):
         db.session.delete(score)
         db.session.commit()
         return jsonify({'message': f'Score {score_id} deleted successfully'}), 200
-
 
     
 # Create an AppGroup for custom commands
