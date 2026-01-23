@@ -591,7 +591,7 @@
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // Edit user role - FIXED VERSION using Flask-Login route
+    // Edit user role - MATCHES delete_user PATTERN
     async function editUserRole(userId, userUid) {
         const currentRole = prompt('Enter new role (Admin, Teacher, or User):');
         if (!currentRole) return;
@@ -602,160 +602,115 @@
             return;
         }
         
-        try {
-            const response = await fetch(`/update_user/${userUid}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    role: currentRole
-                })
-            });
-
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to update role');
-            }
-            
-            alert(`Role updated successfully to ${currentRole}`);
+        fetch(`/update_user/${userUid}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: currentRole })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Role updated successfully');
             location.reload();
-        } catch (error) {
-            console.error('Error updating role:', error);
-            alert('Error updating role: ' + error.message);
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating role');
+        });
     }
 
-    // Delete performance rating - using Flask-Login route
+    // Delete performance - MATCHES delete_user PATTERN
     async function deletePerformance(perfId) {
-        if (!confirm('Are you sure you want to delete this performance rating?')) return;
+        if (!confirm('Delete this performance rating?')) return;
         
-        try {
-            const response = await fetch(`/api/admin/performance/${perfId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include'
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Failed to delete performance');
-            }
-            
-            alert('Performance rating deleted successfully');
+        fetch(`/performance/delete/${perfId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Performance deleted');
             loadPerformanceData();
-        } catch (error) {
-            console.error('Error deleting performance:', error);
-            alert('Error deleting performance rating: ' + error.message);
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting performance');
+        });
     }
 
-    // Edit performance rating - using Flask-Login route
+    // Edit performance - MATCHES delete_user PATTERN
     async function editPerformance(perfId, currentRating) {
         const newRating = prompt(`Enter new rating (1-5). Current: ${currentRating}`, currentRating);
         if (!newRating) return;
         
         const rating = parseInt(newRating);
         if (isNaN(rating) || rating < 1 || rating > 5) {
-            alert('Invalid rating. Must be between 1 and 5.');
+            alert('Invalid rating. Must be 1-5.');
             return;
         }
         
-        try {
-            const response = await fetch(`/api/admin/performance/${perfId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ rating: rating })
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Failed to update performance');
-            }
-            
-            alert('Performance rating updated successfully');
+        fetch(`/performance/update/${perfId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: rating })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Performance updated');
             loadPerformanceData();
-        } catch (error) {
-            console.error('Error updating performance:', error);
-            alert('Error updating performance rating: ' + error.message);
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating performance');
+        });
     }
 
-    // Delete media score - using Flask-Login route
+    // Delete media score - MATCHES delete_user PATTERN
     async function deleteMediaScore(scoreId) {
-        if (!confirm('Are you sure you want to delete this media score?')) return;
+        if (!confirm('Delete this media score?')) return;
         
-        try {
-            const response = await fetch(`/api/admin/media/${scoreId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include'
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to delete score');
-            }
-            
-            alert('Media score deleted successfully');
+        fetch(`/media/delete/${scoreId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Media score deleted');
             loadMediaData();
-        } catch (error) {
-            console.error('Error deleting media score:', error);
-            alert('Error deleting media score: ' + error.message);
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting media score');
+        });
     }
 
-    // Edit media score - using Flask-Login route
+    // Edit media score - MATCHES delete_user PATTERN
     async function editMediaScore(scoreId, currentUsername, currentTime) {
         const newUsername = prompt(`Enter new username. Current: ${currentUsername}`, currentUsername);
         if (!newUsername) return;
         
-        const newTime = prompt(`Enter new time (in seconds). Current: ${currentTime}`, currentTime);
+        const newTime = prompt(`Enter new time (seconds). Current: ${currentTime}`, currentTime);
         if (!newTime) return;
         
         const time = parseInt(newTime);
         if (isNaN(time) || time < 0) {
-            alert('Invalid time. Must be a positive number.');
+            alert('Invalid time.');
             return;
         }
         
-        try {
-            const response = await fetch(`/api/admin/media/${scoreId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    username: newUsername,
-                    time: time
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to update score');
-            }
-            
-            alert('Media score updated successfully');
+        fetch(`/media/update/${scoreId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: newUsername, time: time })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Media score updated');
             loadMediaData();
-        } catch (error) {
-            console.error('Error updating media score:', error);
-            alert('Error updating media score: ' + error.message);
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating media score');
+        });
     }
 
     // Load media scores data

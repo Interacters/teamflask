@@ -262,6 +262,8 @@ def kasm_users():
 
 # Replace the existing admin routes in main.py with these corrected versions:
 
+# ADMIN ROUTES - EXACT SAME PATTERN AS delete_user
+
 @app.route('/update_user/<string:uid>', methods=['PUT'])
 @login_required
 def update_user(uid):
@@ -269,124 +271,118 @@ def update_user(uid):
         return jsonify({'error': 'Unauthorized'}), 403
 
     data = request.get_json()
-    print(f"🔧 Request Data: {data}")
-
     user = User.query.filter_by(_uid=uid).first()
+    
     if not user:
-        return jsonify({"message": "User not found."}), 404
+        return jsonify({"error": "User not found"}), 404
     
-    print(f"🔧 Found user: {user.uid}, current role: {user.role}")
-    
-    # Directly set the role attribute (bypass the update method)
+    # Direct update like delete does
     if 'role' in data:
         user._role = data['role']
-        print(f"🔧 Setting role to: {data['role']}")
     
-    # Commit the change
     try:
         db.session.commit()
-        print(f"🔧 Committed! New role: {user.role}")
-        return jsonify({"message": "User updated successfully.", "new_role": user.role}), 200
+        return jsonify({"message": "User updated successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/admin/performance/<int:perf_id>', methods=['PUT', 'DELETE'])
+@app.route('/performance/delete/<int:perf_id>', methods=['DELETE'])
 @login_required
-def admin_performance(perf_id):
-    """Admin-only performance update/delete using Flask-Login"""
+def delete_performance(perf_id):
     if current_user.role != 'Admin':
-        return jsonify({'message': 'Admin access required'}), 403
+        return jsonify({'error': 'Unauthorized'}), 403
     
     from model.performance import Performance
+    perf = Performance.query.get(perf_id)
     
-    performance = Performance.query.get(perf_id)
-    if not performance:
+    if not perf:
         return jsonify({'error': 'Performance not found'}), 404
     
-    if request.method == 'PUT':
-        body = request.get_json()
-        rating = body.get('rating')
-        if rating is not None:
-            try:
-                rating = int(rating)
-                if rating not in [1, 2, 3, 4, 5]:
-                    return jsonify({'error': 'Invalid rating. Must be 1-5.'}), 400
-                performance.rating = rating
-            except (ValueError, TypeError):
-                return jsonify({'error': 'Rating must be a number'}), 400
-        
+    try:
+        db.session.delete(perf)
         db.session.commit()
-        return jsonify(performance.read()), 200
-    
-    elif request.method == 'DELETE':
-        db.session.delete(performance)
-        db.session.commit()
-        return jsonify({'message': f'Performance {perf_id} deleted successfully'}), 200
+        return jsonify({'message': 'Performance deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/admin/media/<int:score_id>', methods=['PUT', 'DELETE'])
+@app.route('/performance/update/<int:perf_id>', methods=['PUT'])
 @login_required
-def admin_media(score_id):
-    """Admin-only media score update/delete using Flask-Login"""
+def update_performance(perf_id):
     if current_user.role != 'Admin':
-        return jsonify({'message': 'Admin access required'}), 403
+        return jsonify({'error': 'Unauthorized'}), 403
     
-    # Import MediaScore from the correct location
-    from api.media_api import MediaScore
+    from model.performance import Performance
+    perf = Performance.query.get(perf_id)
     
-    score = MediaScore.query.get(score_id)
-    if not score:
-        return jsonify({'message': 'Score not found'}), 404
+    if not perf:
+        return jsonify({'error': 'Performance not found'}), 404
     
-    if request.method == 'PUT':
-        body = request.get_json()
-        if body.get('username'):
-            score.username = body.get('username')
-        if body.get('time') is not None:
-            try:
-                score.time = int(body.get('time'))
-            except (ValueError, TypeError):
-                return jsonify({'message': 'Time must be an integer'}), 400
-        
+    data = request.get_json()
+    
+    if 'rating' in data:
+        rating = int(data['rating'])
+        if rating not in [1, 2, 3, 4, 5]:
+            return jsonify({'error': 'Invalid rating'}), 400
+        perf.rating = rating
+    
+    try:
         db.session.commit()
-        return jsonify(score.read()), 200
+        return jsonify({'message': 'Performance updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/media/delete/<int:score_id>', methods=['DELETE'])
+@login_required
+def delete_media_score(score_id):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     
-    elif request.method == 'DELETE':
+    from api.media_api import MediaScore
+    score = MediaScore.query.get(score_id)
+    
+    if not score:
+        return jsonify({'error': 'Score not found'}), 404
+    
+    try:
         db.session.delete(score)
         db.session.commit()
-        return jsonify({'message': f'Score {score_id} deleted successfully'}), 200
-    
-@app.route('/debug/check-user/<string:uid>')
-@login_required
-def check_user(uid):
-    user = User.query.filter_by(_uid=uid).first()
-    if not user:
-        return jsonify({"error": "Not found"}), 404
-    
-    # Direct SQL query to see what's actually in the database
-    result = db.session.execute(
-        db.text("SELECT id, _uid, _name, _role FROM users WHERE _uid = :uid"),
-        {"uid": uid}
-    ).fetchone()
-    
-    return jsonify({
-        "from_model": {
-            "uid": user.uid,
-            "name": user.name,
-            "role": user.role,
-            "_role": user._role
-        },
-        "from_raw_sql": {
-            "id": result[0] if result else None,
-            "uid": result[1] if result else None,
-            "name": result[2] if result else None,
-            "role": result[3] if result else None
-        }
-    })
+        return jsonify({'message': 'Media score deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
+
+@app.route('/media/update/<int:score_id>', methods=['PUT'])
+@login_required
+def update_media_score(score_id):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    from api.media_api import MediaScore
+    score = MediaScore.query.get(score_id)
+    
+    if not score:
+        return jsonify({'error': 'Score not found'}), 404
+    
+    data = request.get_json()
+    
+    if 'username' in data:
+        score.username = data['username']
+    if 'time' in data:
+        score.time = int(data['time'])
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Media score updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
     
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
