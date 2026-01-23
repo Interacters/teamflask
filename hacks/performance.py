@@ -99,7 +99,6 @@ class PerformanceAPI:
     
     class _Read(Resource):
         """Get all performance ratings"""
-        @token_required()
         def get(self):
             try:
                 return getPerformances()
@@ -120,7 +119,7 @@ class PerformanceAPI:
                 current_app.logger.error(f"Error reading performance {id}: {str(e)}")
                 return {'error': str(e)}, 500
             
-        @token_required("Admin")
+        @token_required(["Admin"])
         def put(self, id):
             """Update a performance rating - Admin only"""
             try:
@@ -151,7 +150,7 @@ class PerformanceAPI:
                 current_app.logger.error(f"Error updating performance: {str(e)}")
                 return {'error': str(e)}, 500
         
-        @token_required("Admin")
+        @token_required(["Admin"])
         def delete(self, id):
             """Delete a performance rating - Admin only"""
             try:

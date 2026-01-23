@@ -383,6 +383,7 @@ class User(db.Model, UserMixin):
         grade_data = inputs.get("grade_data", None)
         ap_exam = inputs.get("ap_exam", None)
         school = inputs.get("school", None)
+        role = inputs.get("role", None)
         # States before update
         old_uid = self.uid
         old_kasm_server_needed = self.kasm_server_needed
@@ -408,6 +409,8 @@ class User(db.Model, UserMixin):
             self.ap_exam = ap_exam
         if school is not None:
             self.school = school
+        if role is not None:  
+            self.role = role
 
         # Check this on each update
         if not email:

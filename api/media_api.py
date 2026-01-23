@@ -208,7 +208,7 @@ class MediaLeaderboardAPI(Resource):
 class MediaScoreUpdateAPI(Resource):
     """Update media score - Admin only"""
     
-    @token_required("Admin")
+    @token_required(["Admin"])
     def put(self, score_id):
         """Update a media score"""
         try:
@@ -237,7 +237,7 @@ class MediaScoreUpdateAPI(Resource):
 class MediaScoreDeleteAPI(Resource):
     """Delete media score - Admin only"""
     
-    @token_required("Admin")
+    @token_required(["Admin"])
     def delete(self, score_id):
         """Delete a media score"""
         try:

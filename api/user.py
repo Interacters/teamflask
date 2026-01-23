@@ -186,36 +186,25 @@ class UserAPI:
         
         @token_required()
         def put(self):
-            """
-            Update user details.
-
-            Retrieves the current user from the token_required authentication check and updates the user details based on the JSON body of the request.
-
-            Returns:
-                JSON response with the updated user details or an error message.
-            """
-            
-            # Retrieve the current user from the token_required authentication check
             current_user = g.current_user
-            # Read data from the JSON body of the request
             body = request.get_json()
 
             ''' Admin-specific update handling '''
             if current_user.role == 'Admin':
                 uid = body.get('uid')
-                # Admin is updating themself
                 if uid is None or uid == current_user.uid:
                     user = current_user 
-                else: # Admin is updating another user
-                    """ User SQLAlchemy query returning a single user """
+                else:
                     user = User.query.filter_by(_uid=uid).first()
                     if user is None:
                         return {'message': f'User {uid} not found'}, 404
             else:
-                # Non-admin can only update themselves
+                # Non-admin trying to update someone else
+                if body.get('uid') and body.get('uid') != current_user.uid:
+                    return {'message': 'Permission denied'}, 403
                 user = current_user
-                
-            # Accounts are desired to be GitHub accounts, change must be validated 
+            
+            # ✅ ONLY validate GitHub if the UID is ACTUALLY CHANGING
             if body.get('uid') and body.get('uid') != user._uid:
                 _, status = GitHubUser().get(body.get('uid'))
                 if status != 200:
@@ -227,7 +216,7 @@ class UserAPI:
             # return response, the updated user details as a JSON object
             return jsonify(user.read())
         
-        @token_required("Admin")
+        @token_required(["Admin"])
         def delete(self):
             """
             Delete a user.

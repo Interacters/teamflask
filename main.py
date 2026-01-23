@@ -15,6 +15,7 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
+import jwt 
 # Near the top with other imports (around line 20)
 
 # import "objects" from "this" project
@@ -158,7 +159,6 @@ def index():
     return render_template("index.html")
 
 
-
 @app.route('/users/table2')
 @login_required
 def u2table():
@@ -257,66 +257,130 @@ def kasm_users():
             'error.html', 
             message=f"Error connecting to KASM API: {str(e)}"
         ), 500
-        
-        
-@app.route('/delete_user/<user_id>', methods=['DELETE'])
-def delete_user_kasm(user_id):
+
+# Replace the existing admin routes in main.py with these corrected versions:
+
+# ADMIN ROUTES - EXACT SAME PATTERN AS delete_user
+
+@app.route('/update_user/<string:uid>', methods=['PUT'])
+@login_required
+def update_user(uid):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    user = User.query.filter_by(_uid=uid).first()
+    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Direct update like delete does
+    if 'role' in data:
+        user._role = data['role']
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": "User updated successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/performance/delete/<int:perf_id>', methods=['DELETE'])
+@login_required
+def delete_performance(perf_id):
     if current_user.role != 'Admin':
         return jsonify({'error': 'Unauthorized'}), 403
     
-    SERVER = current_app.config.get('KASM_SERVER')
-    API_KEY = current_app.config.get('KASM_API_KEY')
-    API_KEY_SECRET = current_app.config.get('KASM_API_KEY_SECRET')
-
-    if not SERVER or not API_KEY or not API_KEY_SECRET:
-        return {'message': 'KASM keys are missing'}, 400
-
+    from model.performance import Performance
+    perf = Performance.query.get(perf_id)
+    
+    if not perf:
+        return jsonify({'error': 'Performance not found'}), 404
+    
     try:
-        # Kasm API to delete a user
-        url = f"{SERVER}/api/public/delete_user"
-        data = {
-            "api_key": API_KEY,
-            "api_key_secret": API_KEY_SECRET,
-            "target_user": {"user_id": user_id},
-            "force": False
-        }
-        response = requests.post(url, json=data)
-
-        if response.status_code == 200:
-            return {'message': 'User deleted successfully'}, 200
-        else:
-            return {'message': 'Failed to delete user'}, response.status_code
-
-    except requests.RequestException as e:
-        return {'message': 'Error connecting to KASM API', 'error': str(e)}, 500
+        db.session.delete(perf)
+        db.session.commit()
+        return jsonify({'message': 'Performance deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
-@app.route('/update_user/<string:uid>', methods=['PUT'])
-def update_user(uid):
-    # Authorization check
+@app.route('/performance/update/<int:perf_id>', methods=['PUT'])
+@login_required
+def update_performance(perf_id):
     if current_user.role != 'Admin':
         return jsonify({'error': 'Unauthorized'}), 403
-
-    # Get the JSON data from the request
+    
+    from model.performance import Performance
+    perf = Performance.query.get(perf_id)
+    
+    if not perf:
+        return jsonify({'error': 'Performance not found'}), 404
+    
     data = request.get_json()
-    print(f"Request Data: {data}")  # Log the incoming data
-
-    # Find the user in the database
-    user = User.query.filter_by(_uid=uid).first()
-    if user:
-        print(f"Found user: {user.uid}")  # Log the found user's UID
-        
-        # Update the user using the provided data
-        user.update(data)  # Assuming `user.update(data)` is a method on your User model
-        
-        # Save changes to the database
-        return jsonify({"message": "User updated successfully."}), 200
-    else:
-        print("User not found.")  # Log when user is not found
-        return jsonify({"message": "User not found."}), 404
+    
+    if 'rating' in data:
+        rating = int(data['rating'])
+        if rating not in [1, 2, 3, 4, 5]:
+            return jsonify({'error': 'Invalid rating'}), 400
+        perf.rating = rating
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Performance updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
+@app.route('/media/delete/<int:score_id>', methods=['DELETE'])
+@login_required
+def delete_media_score(score_id):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    from api.media_api import MediaScore
+    score = MediaScore.query.get(score_id)
+    
+    if not score:
+        return jsonify({'error': 'Score not found'}), 404
+    
+    try:
+        db.session.delete(score)
+        db.session.commit()
+        return jsonify({'message': 'Media score deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
+
+@app.route('/media/update/<int:score_id>', methods=['PUT'])
+@login_required
+def update_media_score(score_id):
+    if current_user.role != 'Admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    from api.media_api import MediaScore
+    score = MediaScore.query.get(score_id)
+    
+    if not score:
+        return jsonify({'error': 'Score not found'}), 404
+    
+    data = request.get_json()
+    
+    if 'username' in data:
+        score.username = data['username']
+    if 'time' in data:
+        score.time = int(data['time'])
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Media score updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
     
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
