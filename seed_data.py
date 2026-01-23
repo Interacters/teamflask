@@ -15,23 +15,23 @@ def seed_users():
     """Create fake users"""
     print("\n📝 Creating fake users...")
     
-    # Fake user data
+    # Fake user data with fake emails
     fake_users = [
-        {"name": "Charlie Brown", "uid": "charlie_brown", "role": "User"},
-        {"name": "Lucy van Pelt", "uid": "lucy_van_pelt", "role": "User"},
-        {"name": "Linus van Pelt", "uid": "linus_van_pelt", "role": "User"},
-        {"name": "Snoopy", "uid": "snoopy", "role": "User"},
-        {"name": "Peppermint Patty", "uid": "peppermint_patty", "role": "User"},
-        {"name": "Marcie", "uid": "marcie", "role": "User"},
-        {"name": "Eric Cartman", "uid": "eric_cartman", "role": "User"},
-        {"name": "Stan Marsh", "uid": "stan_marsh", "role": "User"},
-        {"name": "Mr. Garrison", "uid": "mr_garrison", "role": "Teacher"},
-        {"name": "Kyle Broflovski", "uid": "kyle_broflovski", "role": "User"},
-        {"name": "Kenny McCormick", "uid": "kenny_mccormick", "role": "User"},
-        {"name": "Butters Stotch", "uid": "butters_stotch", "role": "User"},
-        {"name": "Wendy Testaburger", "uid": "wendy_testaburger", "role": "User"},
-        {"name": "Sally Brown", "uid": "sally_brown", "role": "User"},
-        {"name": "Schroeder", "uid": "schroeder", "role": "User"}
+        {"name": "Charlie Brown", "uid": "charlie_brown", "role": "User", "email": "charlie.brown@peanuts.com"},
+        {"name": "Lucy van Pelt", "uid": "lucy_van_pelt", "role": "User", "email": "lucy.vanpelt@peanuts.com"},
+        {"name": "Linus van Pelt", "uid": "linus_van_pelt", "role": "User", "email": "linus.vanpelt@peanuts.com"},
+        {"name": "Snoopy", "uid": "snoopy", "role": "User", "email": "snoopy@doghouse.com"},
+        {"name": "Peppermint Patty", "uid": "peppermint_patty", "role": "User", "email": "patty@peanuts.com"},
+        {"name": "Marcie", "uid": "marcie", "role": "User", "email": "marcie@peanuts.com"},
+        {"name": "Eric Cartman", "uid": "eric_cartman", "role": "User", "email": "cartman@southpark.com"},
+        {"name": "Stan Marsh", "uid": "stan_marsh", "role": "User", "email": "stan.marsh@southpark.com"},
+        {"name": "Mr. Garrison", "uid": "mr_garrison", "role": "Teacher", "email": "garrison@southpark.edu"},
+        {"name": "Kyle Broflovski", "uid": "kyle_broflovski", "role": "User", "email": "kyle.b@southpark.com"},
+        {"name": "Kenny McCormick", "uid": "kenny_mccormick", "role": "User", "email": "kenny.m@southpark.com"},
+        {"name": "Butters Stotch", "uid": "butters_stotch", "role": "User", "email": "butters@southpark.com"},
+        {"name": "Wendy Testaburger", "uid": "wendy_testaburger", "role": "User", "email": "wendy.t@southpark.com"},
+        {"name": "Sally Brown", "uid": "sally_brown", "role": "User", "email": "sally.brown@peanuts.com"},
+        {"name": "Schroeder", "uid": "schroeder", "role": "User", "email": "schroeder@peanuts.com"}
     ]
     
     # Get sections for assignment
@@ -55,20 +55,22 @@ def seed_users():
             created_users.append(existing)
             continue
         
-        # Create user with default password
+        # Create user with only constructor parameters
         user = User(
             name=user_data['name'],
             uid=user_data['uid'],
             password=app.config.get('DEFAULT_PASSWORD', '123toby'),
             role=user_data['role'],
-            email=f"{user_data['uid']}@example.com",
+            kasm_server_needed=False,
             sid=f"SID{random.randint(100000, 999999)}",
-            school="Test High School",
-            kasm_server_needed=False
+            school="Test High School"
         )
         
-        # Create user
-        created = user.create()
+        # Create user with email via dictionary
+        created = user.create({
+            'email': user_data['email']
+        })
+        
         if created:
             # Assign 1-3 random sections
             num_sections = random.randint(1, min(3, len(sections)))
@@ -128,13 +130,12 @@ def seed_media_scores():
     """Create fake media bias game scores"""
     print("\n🎮 Creating fake media scores...")
     
-    # Fake player names
+    # Fake player names - matching the users created above
     fake_players = [
         "charlie_brown", "lucy_van_pelt", "linus_van_pelt", "snoopy",
-"peppermint_patty", "marcie", "eric_cartman", "stan_marsh",
-"mr_garrison", "kyle_broflovski", "kenny_mccormick", "butters_stotch",
-"wendy_testaburger", "sally_brown", "schroeder"
-
+        "peppermint_patty", "marcie", "eric_cartman", "stan_marsh",
+        "mr_garrison", "kyle_broflovski", "kenny_mccormick", "butters_stotch",
+        "wendy_testaburger", "sally_brown", "schroeder"
     ]
     
     created_count = 0
@@ -180,9 +181,9 @@ def main():
         print("✅ Database seeding completed successfully!")
         print("\nYou can now view your data in the management dashboard")
         print("Test user credentials:")
-        print("  Username: test_alice (or any test_* username)")
+        print("  Username: charlie_brown (or any character username)")
         print(f"  Password: {app.config.get('DEFAULT_PASSWORD', '123toby')}")
-        print("\n💡 Tip: If you need to clear test data later, use the clear_existing_data() function")
+        print("\n💡 Tip: Run this script multiple times to add more test data")
 
 
 if __name__ == "__main__":
