@@ -384,7 +384,7 @@ class UserAPI:
                             resp.set_cookie(
                                 cookie_name,
                                 token,
-                                max_age=43200,  # 12 hours
+                                max_age=43200,
                                 secure=True,       # REQUIRED for SameSite=None
                                 httponly=True,
                                 path='/',
@@ -396,7 +396,7 @@ class UserAPI:
                             resp.set_cookie(
                                 cookie_name,
                                 token,
-                                max_age=43200,  # 12 hours
+                                max_age=43200,
                                 secure=False,
                                 httponly=True,
                                 path='/',
