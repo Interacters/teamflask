@@ -347,7 +347,7 @@ class UserAPI:
                             algorithm="HS256"
                         )
                         
-                        # BETTER production detection using Origin header f
+                        # BETTER production detection using Origin header
                         origin = request.headers.get('Origin', '')
                         host = request.host
                         
