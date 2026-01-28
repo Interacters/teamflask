@@ -15,7 +15,6 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
-from multirating_api import multirating_api
 import jwt 
 # Near the top with other imports (around line 20)
 
@@ -84,7 +83,6 @@ app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
 app.register_blueprint(microblog_api)
 app.register_blueprint(performance_api)
-app.register_blueprint(multirating_api, url_prefix='/api')
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
