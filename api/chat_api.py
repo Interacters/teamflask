@@ -44,10 +44,11 @@ IMPORTANT RULES:
 - Provide helpful hints about how to evaluate the source
 - DO NOT directly state whether the source is left-leaning, center, or right-leaning"""
             else:
-                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 200 characters.
+                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages brief.
 You are an educational assistant helping students learn about news sources and media literacy.
 
 IMPORTANT RULES:
+- Provide information in BULLET POINT format
 - Provide factual, neutral information about news organizations
 - DO NOT classify sources as left/center/right biased/conservative/liberal
 - Focus on verifiable facts that help students evaluate sources themselves"""            
