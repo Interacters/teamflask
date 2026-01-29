@@ -18,32 +18,53 @@ def get_prompts_file():
 def _read_prompts_file():
     """Read prompts from JSON file with file locking"""
     PROMPTS_FILE = get_prompts_file()
+    
+    # CRITICAL FIX: Always ensure file exists before reading
     if not os.path.exists(PROMPTS_FILE):
+        initPrompts()  # Create it if missing
+    
+    try:
+        with open(PROMPTS_FILE, 'r') as f:
+            fcntl.flock(f, fcntl.LOCK_SH)  # Shared lock for reading
+            try:
+                data = json.load(f)
+                # Validate data structure
+                if not isinstance(data, list):
+                    raise ValueError("Invalid data format")
+            except (json.JSONDecodeError, ValueError) as e:
+                print(f"⚠️  Corrupted prompts.json, reinitializing: {e}")
+                data = []
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)  # Unlock
+        return data
+    except Exception as e:
+        print(f"❌ Error reading prompts file: {e}")
         return []
-    with open(PROMPTS_FILE, 'r') as f:
-        fcntl.flock(f, fcntl.LOCK_SH)  # Shared lock for reading
-        try:
-            data = json.load(f)
-        except Exception:
-            data = []
-        fcntl.flock(f, fcntl.LOCK_UN)  # Unlock
-    return data
 
 def _write_prompts_file(data):
     """Write prompts to JSON file with exclusive lock"""
     PROMPTS_FILE = get_prompts_file()
-    with open(PROMPTS_FILE, 'w') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock for writing
-        json.dump(data, f)
-        fcntl.flock(f, fcntl.LOCK_UN)
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(PROMPTS_FILE), exist_ok=True)
+    
+    try:
+        with open(PROMPTS_FILE, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock for writing
+            json.dump(data, f, indent=2)  # Added indent for readability
+            f.flush()  # CRITICAL: Force write to disk
+            os.fsync(f.fileno())  # CRITICAL: Ensure OS writes to disk
+            fcntl.flock(f, fcntl.LOCK_UN)
+        return True
+    except Exception as e:
+        print(f"❌ Error writing prompts file: {e}")
+        return False
 
 def initPrompts():
-    """Initialize prompts.json if it doesn't exist"""
+    """Initialize prompts.json if it doesn't exist or is corrupted"""
     PROMPTS_FILE = get_prompts_file()
-    # Only initialize if file does not exist
-    if os.path.exists(PROMPTS_FILE):
-        return
     
+    # Always reinitialize to ensure clean state
     prompts_data = []
     for idx, prompt_text in enumerate(prompt_list, start=1):
         prompts_data.append({
@@ -52,53 +73,104 @@ def initPrompts():
             "clicks": 0
         })
     
-    _write_prompts_file(prompts_data)
-    print(f"✅ Initialized {len(prompts_data)} prompts")
+    success = _write_prompts_file(prompts_data)
+    if success:
+        print(f"✅ Initialized {len(prompts_data)} prompts in {PROMPTS_FILE}")
+    else:
+        print(f"❌ Failed to initialize prompts")
+    
+    return prompts_data
 
 def getPrompts():
     """Get all prompts"""
-    return _read_prompts_file()
+    prompts = _read_prompts_file()
+    
+    # If empty or corrupted, reinitialize
+    if not prompts or len(prompts) != len(prompt_list):
+        print("⚠️  Prompts missing or incomplete, reinitializing...")
+        prompts = initPrompts()
+    
+    return prompts
 
 def getPrompt(id):
     """Get a single prompt by ID"""
-    prompts = _read_prompts_file()
+    prompts = getPrompts()
+    
     # Find prompt with matching ID
     for prompt in prompts:
-        if prompt['id'] == id:
+        if prompt.get('id') == id:
             return prompt
+    
     return None
 
 def getPromptClicks():
     """Get click counts for all prompts as a dictionary"""
-    prompts = _read_prompts_file()
+    prompts = getPrompts()
+    
     # Return format: {1: 45, 2: 32, 3: 28, 4: 15, 5: 12}
-    return {prompt['id']: prompt['clicks'] for prompt in prompts}
+    clicks_dict = {}
+    for prompt in prompts:
+        prompt_id = prompt.get('id')
+        clicks = prompt.get('clicks', 0)
+        if prompt_id is not None:
+            clicks_dict[prompt_id] = clicks
+    
+    return clicks_dict
 
 def increment_prompt_click(id):
     """Atomically increment click count for a prompt"""
     PROMPTS_FILE = get_prompts_file()
-    with open(PROMPTS_FILE, 'r+') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
-        prompts = json.load(f)
-        
-        # Find and increment the prompt
-        for prompt in prompts:
-            if prompt['id'] == id:
-                prompt['clicks'] += 1
-                break
-        
-        # Write back to file
-        f.seek(0)  # Move to start
-        json.dump(prompts, f)
-        f.truncate()  # Remove any leftover data
-        fcntl.flock(f, fcntl.LOCK_UN)
+    
+    # Ensure file exists
+    if not os.path.exists(PROMPTS_FILE):
+        initPrompts()
+    
+    updated_prompt = None
+    
+    try:
+        with open(PROMPTS_FILE, 'r+') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
+            
+            try:
+                prompts = json.load(f)
+                
+                # Find and increment the prompt
+                found = False
+                for prompt in prompts:
+                    if prompt.get('id') == id:
+                        prompt['clicks'] = prompt.get('clicks', 0) + 1
+                        updated_prompt = prompt.copy()
+                        found = True
+                        print(f"✅ Incremented prompt {id} to {prompt['clicks']} clicks")
+                        break
+                
+                if not found:
+                    print(f"⚠️  Prompt ID {id} not found")
+                    return None
+                
+                # Write back to file
+                f.seek(0)  # Move to start
+                f.truncate()  # Clear file
+                json.dump(prompts, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())  # Force write
+                
+            except json.JSONDecodeError as e:
+                print(f"❌ Corrupted JSON in increment: {e}")
+                return None
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+                
+    except Exception as e:
+        print(f"❌ Error incrementing click: {e}")
+        return None
     
     # Return the updated prompt
-    return getPrompt(id)
+    return updated_prompt
 
 def countPrompts():
     """Get total number of prompts"""
-    prompts = _read_prompts_file()
+    prompts = getPrompts()
     return len(prompts)
 
 # For testing
