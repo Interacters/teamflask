@@ -18,6 +18,15 @@ from hacks.prompts import initPrompts
 from hacks.performance import performance_api
 from hacks.performances import performances_api
 import jwt 
+# Add this to your main Flask app file (e.g., main.py or app.py)
+# This should be AFTER you set up app.config['DATA_FOLDER']
+
+from hacks.prompts import initPrompts
+
+# ... your other Flask setup code ...
+
+
+# ... rest of your app code ...
 # Near the top with other imports (around line 20)
 
 # import "objects" from "this" project

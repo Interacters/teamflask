@@ -42,29 +42,16 @@ class ChatAPI(Resource):
                 
 IMPORTANT RULES:
 - Provide helpful hints about how to evaluate the source
-- Discuss ownership, funding model, audience, and editorial approach
-- DO NOT directly state whether the source is left-leaning, center, or right-leaning
-- Focus on objective facts that help students make their own assessment
-- Keep hints under 100 words
-- Be encouraging and educational
-
-Example good hint: "Consider who owns this organization and how they generate revenue. Think about whether they rely on subscriptions, advertising, or donations, and how that might influence their coverage choices."
-
-Example bad hint: "This source is left-leaning." (Too direct - don't do this!)"""
+- DO NOT directly state whether the source is left-leaning, center, or right-leaning"""
             else:
-                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages about 200 characters.
+                prompt = f"""Provide detailed information about: {message} but do not provide any information about political leanings. Keep messages brief.
 You are an educational assistant helping students learn about news sources and media literacy.
 
 IMPORTANT RULES:
+- Provide information in BULLET POINT format
 - Provide factual, neutral information about news organizations
-- Include: ownership, founding date, headquarters, funding model, and focus areas
-- DO NOT classify sources as left/center/right biased
-- DO NOT reveal bias ratings or political leanings
-- Focus on verifiable facts that help students evaluate sources themselves
-- Keep responses under 200 words
-- Be neutral and educational
-- Provide information on well-known shows hosted by the organization if relevant and asked
-- Provide a much information as you can with you're knowledge cutoff date."""            
+- DO NOT classify sources as left/center/right biased/conservative/liberal
+- Focus on verifiable facts that help students evaluate sources themselves"""            
             # Call Gemini API
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(prompt)
