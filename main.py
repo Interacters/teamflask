@@ -411,7 +411,6 @@ app.cli.add_command(custom_cli)
 with app.app_context():
     db.create_all()
     print("✅ Database tables created!")
-    initJokes()
     initPerformances()
     initPrompts()
 if __name__ == "__main__":
