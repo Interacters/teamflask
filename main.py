@@ -15,8 +15,6 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
-from hacks.performance import performance_api
-from hacks.performances import performances_api
 import jwt 
 # Add this to your main Flask app file (e.g., main.py or app.py)
 # This should be AFTER you set up app.config['DATA_FOLDER']
@@ -94,8 +92,6 @@ app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
 app.register_blueprint(microblog_api)
 app.register_blueprint(performance_api)
-app.register_blueprint(performance_api)
-app.register_blueprint(performances_api)
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
@@ -419,26 +415,4 @@ if __name__ == "__main__":
     port = app.config['FLASK_PORT']
     print(f"** Server running: http://localhost:{port}")  # Pretty link
     app.run(debug=True, host=host, port=port, use_reloader=False)
-    
-
-
-@performances_api.route('/multirating/user/<int:user_id>', methods=['GET'])
-@login_required
-def get_user_multirating_responses(user_id):
-    """
-    Get all rating responses for a specific user (admin only)
-    
-    Args:
-        user_id: ID of the user to lookup
-    """
-    try:
-        # Check admin permission
-        if current_user.role != 'Admin':
-            return jsonify({'error': 'Admin access required'}), 403
-        
-        responses = MultiRating.get_by_user(user_id)
-        return jsonify(responses), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
     
