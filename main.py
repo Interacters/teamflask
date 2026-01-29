@@ -106,11 +106,6 @@ app.register_blueprint(media_api)
 app.register_blueprint(chat_api)
 app.register_blueprint(thesis_api)
 app.register_blueprint(bias_analysis_api)
-# Initialize prompts when app starts
-with app.app_context():
-    print("🚀 Initializing prompts database...")
-    initPrompts()
-    print("✅ Prompts initialized!")
 # Jokes file initialization
 with app.app_context():
     initJokes()

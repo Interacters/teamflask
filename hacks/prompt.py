@@ -13,60 +13,34 @@ class PromptsAPI:
     # GET /api/prompts - Get all prompts
     class _Read(Resource):
         def get(self):
-            try:
-                prompts = getPrompts()
-                return jsonify(prompts)
-            except Exception as e:
-                print(f"❌ Error in _Read: {e}")
-                return jsonify({"error": str(e)}), 500
+            return jsonify(getPrompts())
     
     # GET /api/prompts/clicks - Get click counts as dictionary
     class _ReadClicks(Resource):
         def get(self):
-            try:
-                clicks = getPromptClicks()
-                print(f"📊 Returning click counts: {clicks}")  # Debug logging
-                return jsonify(clicks)
-            except Exception as e:
-                print(f"❌ Error in _ReadClicks: {e}")
-                return jsonify({"error": str(e)}), 500
+            return jsonify(getPromptClicks())
     
     # GET /api/prompts/<id> - Get single prompt by ID
     class _ReadID(Resource):
         def get(self, id):
-            try:
-                prompt = getPrompt(id)
-                if prompt:
-                    return jsonify(prompt)
-                return jsonify({"error": "Prompt not found"}), 404
-            except Exception as e:
-                print(f"❌ Error in _ReadID: {e}")
-                return jsonify({"error": str(e)}), 500
+            prompt = getPrompt(id)
+            if prompt:
+                return jsonify(prompt)
+            return jsonify({"error": "Prompt not found"}), 404
     
     # POST /api/prompts/<id>/click - Increment click count
     class _IncrementClick(Resource):
         def post(self, id):
-            try:
-                print(f"🖱️  Incrementing click for prompt {id}")
-                prompt = increment_prompt_click(id)
-                if prompt:
-                    print(f"✅ Successfully incremented: {prompt}")
-                    return jsonify(prompt)
-                print(f"⚠️  Failed to increment prompt {id}")
-                return jsonify({"error": "Prompt not found"}), 404
-            except Exception as e:
-                print(f"❌ Error in _IncrementClick: {e}")
-                return jsonify({"error": str(e)}), 500
+            prompt = increment_prompt_click(id)
+            if prompt:
+                return jsonify(prompt)
+            return jsonify({"error": "Prompt not found"}), 404
     
     # GET /api/prompts/count - Get total count
     class _ReadCount(Resource):
         def get(self):
-            try:
-                count = countPrompts()
-                return jsonify({'count': count})
-            except Exception as e:
-                print(f"❌ Error in _ReadCount: {e}")
-                return jsonify({"error": str(e)}), 500
+            count = countPrompts()
+            return jsonify({'count': count})
     
     # Register routes
     api.add_resource(_Read, '', '/')
