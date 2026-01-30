@@ -213,3 +213,102 @@ class PerformanceAPI:
     api.add_resource(_ReadUserPerformances, '/user/<int:user_id>', '/user/<int:user_id>/')
     api.add_resource(_ReadStats, '/stats', '/stats/')
     api.add_resource(_ReadCount, '/count', '/count/')
+
+    # NEW MULTI-QUESTION RATING API
+class MultiRatingAPI:
+    """
+    Multi-question ratings (5 questions, 1-5 each)
+    Separate from the single-rating Performance API
+    """
+    
+    class _MultiSubmit(Resource):
+        """Submit multi-question rating"""
+        def options(self):
+            return {}, 200
+        
+        @token_required()
+        def post(self):
+            try:
+                from model.performance import MultiRating
+                
+                current_user = g.current_user
+                data = request.get_json()
+                
+                if not data:
+                    return {'error': 'No data provided'}, 400
+                
+                # Validate all 5 questions
+                required = ['q1', 'q2', 'q3', 'q4', 'q5']
+                for q in required:
+                    if q not in data:
+                        return {'error': f'Missing {q}'}, 400
+                    
+                    try:
+                        rating = int(data[q])
+                        if rating not in [1, 2, 3, 4, 5]:
+                            return {'error': f'{q} must be 1-5'}, 400
+                    except (ValueError, TypeError):
+                        return {'error': f'{q} must be a number'}, 400
+                
+                # Create new multirating
+                multirating = MultiRating(
+                    user_id=current_user.id,
+                    q1=data['q1'],
+                    q2=data['q2'],
+                    q3=data['q3'],
+                    q4=data['q4'],
+                    q5=data['q5']
+                )
+                
+                multirating.create()
+                
+                return {
+                    'message': 'Ratings submitted successfully',
+                    'rating': multirating.read()
+                }, 200
+                
+            except Exception as e:
+                current_app.logger.error(f"Error in multirating submit: {str(e)}")
+                current_app.logger.error(traceback.format_exc())
+                return {'error': str(e)}, 500
+    
+    class _MultiStats(Resource):
+        """Get class averages for all 5 questions"""
+        def get(self):
+            try:
+                from model.performance import MultiRating
+                stats = MultiRating.get_averages()
+                return stats, 200
+            except Exception as e:
+                current_app.logger.error(f"Error getting multirating stats: {str(e)}")
+                return {'error': str(e)}, 500
+    
+    class _MultiAllResponses(Resource):
+        """Get all multirating responses (admin only)"""
+        @token_required(["Admin"])
+        def get(self):
+            try:
+                from model.performance import MultiRating
+                responses = MultiRating.get_all()
+                return responses, 200
+            except Exception as e:
+                current_app.logger.error(f"Error getting all multiratings: {str(e)}")
+                return {'error': str(e)}, 500
+    
+    class _MultiUserResponses(Resource):
+        """Get multiratings for a specific user (admin only)"""
+        @token_required(["Admin"])
+        def get(self, user_id):
+            try:
+                from model.performance import MultiRating
+                responses = MultiRating.get_by_user(user_id)
+                return responses, 200
+            except Exception as e:
+                current_app.logger.error(f"Error getting user multiratings: {str(e)}")
+                return {'error': str(e)}, 500
+    
+    # Add the new routes
+    api.add_resource(_MultiSubmit, '/multirating/submit', '/multirating/submit/')
+    api.add_resource(_MultiStats, '/multirating/stats', '/multirating/stats/')
+    api.add_resource(_MultiAllResponses, '/multirating/responses', '/multirating/responses/')
+    api.add_resource(_MultiUserResponses, '/multirating/user/<int:user_id>', '/multirating/user/<int:user_id>/')

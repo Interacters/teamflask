@@ -153,6 +153,10 @@ def login():
 @app.route('/studytracker')  # route for the study tracker page
 def studytracker():
     return render_template("studytracker.html")
+
+@app.route('/reflection')  
+def reflection():
+    return render_template("reflection_survey.html")
     
 @app.route('/logout')
 def logout():
