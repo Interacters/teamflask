@@ -99,6 +99,7 @@ app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
 # app.register_blueprint(grade_api)
 app.register_blueprint(study_api)
+app.register_blueprint(prompt_api)  
 app.register_blueprint(classroom_api)
 app.register_blueprint(feedback_api)
 app.register_blueprint(joke_api)  # Register the joke API blueprint
