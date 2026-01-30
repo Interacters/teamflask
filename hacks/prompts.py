@@ -1,5 +1,6 @@
 import json, os, fcntl
 from flask import current_app
+from flask_restful import Resource
 
 # Our 5 static prompts
 prompt_list = [
@@ -108,3 +109,22 @@ if __name__ == "__main__":
     print(f"Total prompts: {countPrompts()}")
     print(f"All prompts: {getPrompts()}")
     print(f"Click counts: {getPromptClicks()}")
+
+    class PromptsAPI:
+    
+    # ... your existing code ...
+    
+    # Add this new class for OPTIONS requests
+        class _Options(Resource):
+            def options(self, id=None):
+                return '', 204
+    
+    # Register the OPTIONS handler for all routes that need it
+    api.add_resource(_Read, '', '/')
+    api.add_resource(_ReadClicks, '/clicks', '/clicks/')
+    api.add_resource(_ReadID, '/<int:id>', '/<int:id>/')
+    api.add_resource(_IncrementClick, '/<int:id>/click', '/<int:id>/click/')
+    api.add_resource(_ReadCount, '/count', '/count/')
+    
+    # Add OPTIONS for the click endpoint specifically
+    api.add_resource(_Options, '/<int:id>/click/options')
