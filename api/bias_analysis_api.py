@@ -117,7 +117,7 @@ def analyze_bias(uid):
         
         print("🤖 Calling Gemini API...")
         try:
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(analysis_prompt)
             print(f"✅ Gemini response received ({len(response.text)} chars)")
             
