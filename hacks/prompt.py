@@ -31,24 +31,7 @@ class PromptsAPI:
     # POST /api/prompts/<id>/click - Increment click count
     class _IncrementClick(Resource):
         def post(self, id):
-            """
-            Increment click with optional context data
-            Body can include: { user_id, section, led_to_success }
-            """
-            from flask import request
-            data = request.get_json() or {}
-            
-            user_id = data.get('user_id')
-            section = data.get('section', 'media_bias')  # default to media_bias
-            led_to_success = data.get('led_to_success')  # None, True, or False
-            
-            prompt = increment_prompt_click(
-                id, 
-                user_id=user_id, 
-                section=section,
-                led_to_success=led_to_success
-            )
-            
+            prompt = increment_prompt_click(id)
             if prompt:
                 return jsonify(prompt)
             return jsonify({"error": "Prompt not found"}), 404

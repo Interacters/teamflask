@@ -16,12 +16,6 @@ from hacks.performance import performance_api
 from hacks.performances import initPerformances
 from hacks.prompt import prompt_api
 from hacks.prompts import initPrompts
-#added feb1 brandon
-from hacks.prompt import prompt_api
-
-
-# Then register it
- # ✅ NEW
 import jwt 
 # Add this to your main Flask app file (e.g., main.py or app.py)
 # This should be AFTER you set up app.config['DATA_FOLDER']

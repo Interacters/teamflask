@@ -4,7 +4,7 @@ import google.generativeai as genai
 from __init__ import app
 import os
 
-# Create blueprint
+# Create blueprint - let main app handle CORS
 chat_api = Blueprint('chat_api', __name__, url_prefix='/api')
 api = Api(chat_api)
 
@@ -16,6 +16,7 @@ if GEMINI_API_KEY:
 class ChatAPI(Resource):
     def options(self):
         """Handle OPTIONS preflight for CORS"""
+        # Return empty response, headers will be added by main app
         return {}, 200
     
     def post(self):
@@ -37,9 +38,8 @@ class ChatAPI(Resource):
             
             # Prepare prompt based on type
             if msg_type == 'hint':
-                prompt = f"""Provide a helpful hint (not the full answer) for this question: {message}. 
-You are helping students learn about media literacy by providing hints about news sources. 
-
+                prompt = f"""Provide a helpful hint (not the full answer) for this question: {message}. You are helping students learn about media literacy by providing hints about news sources. 
+                
 IMPORTANT RULES:
 - Provide helpful hints about how to evaluate the source
 - DO NOT directly state whether the source is left-leaning, center, or right-leaning"""
@@ -51,8 +51,7 @@ IMPORTANT RULES:
 - Provide information in BULLET POINT format
 - Provide factual, neutral information about news organizations
 - DO NOT classify sources as left/center/right biased/conservative/liberal
-- Focus on verifiable facts that help students evaluate sources themselves"""
-            
+- Focus on verifiable facts that help students evaluate sources themselves"""            
             # Call Gemini API
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             response = model.generate_content(prompt)

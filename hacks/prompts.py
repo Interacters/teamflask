@@ -50,24 +50,7 @@ def initPrompts():
         prompts_data.append({
             "id": idx,
             "text": prompt_text,
-            "clicks": 0,
-            # ✅ NEW: Track effectiveness
-            "effectiveness": {
-                "successful_completions": 0,
-                "total_uses": 0,
-                "success_rate": 0.0
-            },
-            # ✅ NEW: Track usage by section
-            "usage_by_section": {
-                "media_bias": 0,
-                "thesis_gen": 0,
-                "citations": 0
-            },
-            # ✅ NEW: Track unique users who clicked
-            "unique_users": [],
-            # ✅ NEW: Recent activity
-            "last_clicked": None,
-            "trending_score": 0
+            "clicks": 0
         })
     
     _write_prompts_file(prompts_data)
@@ -92,86 +75,26 @@ def getPromptClicks():
     # Return format: {1: 45, 2: 32, 3: 28, 4: 15, 5: 12}
     return {prompt['id']: prompt['clicks'] for prompt in prompts}
 
-def increment_prompt_click(id, user_id=None, section=None, led_to_success=None):
-    """
-    ALGORITHM: Track prompt effectiveness across multiple dimensions
-    INPUT: id (int), user_id (str), section (str), led_to_success (bool)
-    OUTPUT: Updated prompt object (dict)
-    DATA STRUCTURES: List of prompt dictionaries
-    
-    DEMONSTRATES:
-    - SEQUENCING: Multiple steps in specific order
-    - SELECTION: Conditional logic based on parameters
-    - ITERATION: Loop through prompts list
-    """
-    from datetime import datetime
-    
+def increment_prompt_click(id):
+    """Atomically increment click count for a prompt"""
     PROMPTS_FILE = get_prompts_file()
     with open(PROMPTS_FILE, 'r+') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+        fcntl.flock(f, fcntl.LOCK_EX)  # Exclusive lock
         prompts = json.load(f)
         
-        # ITERATION: Loop through list
+        # Find and increment the prompt
         for prompt in prompts:
-            # SELECTION: Find matching prompt
             if prompt['id'] == id:
-                # SEQUENCING: Execute steps in order
-                
-                # Step 1: Increment basic click counter
                 prompt['clicks'] += 1
-                
-                # Step 2: Track unique users (LIST manipulation)
-                if user_id and user_id not in prompt.get('unique_users', []):
-                    if 'unique_users' not in prompt:
-                        prompt['unique_users'] = []
-                    prompt['unique_users'].append(user_id)
-                
-                # Step 3: Track by section (DICTIONARY manipulation)
-                if section:
-                    if 'usage_by_section' not in prompt:
-                        prompt['usage_by_section'] = {
-                            "media_bias": 0,
-                            "thesis_gen": 0,
-                            "citations": 0
-                        }
-                    if section in prompt['usage_by_section']:
-                        prompt['usage_by_section'][section] += 1
-                
-                # Step 4: Track effectiveness (ALGORITHM)
-                if led_to_success is not None:
-                    if 'effectiveness' not in prompt:
-                        prompt['effectiveness'] = {
-                            "successful_completions": 0,
-                            "total_uses": 0,
-                            "success_rate": 0.0
-                        }
-                    
-                    # SELECTION: Update based on outcome
-                    prompt['effectiveness']['total_uses'] += 1
-                    if led_to_success:
-                        prompt['effectiveness']['successful_completions'] += 1
-                    
-                    # CALCULATE: Derive success rate
-                    total = prompt['effectiveness']['total_uses']
-                    successes = prompt['effectiveness']['successful_completions']
-                    prompt['effectiveness']['success_rate'] = successes / total if total > 0 else 0
-                
-                # Step 5: Update timestamp
-                prompt['last_clicked'] = datetime.now().isoformat()
-                
-                # Step 6: Calculate trending score (recent activity matters more)
-                hours_since_click = 0  # Just clicked
-                time_decay = max(0, 1 - (hours_since_click / 24))  # Decay over 24 hours
-                prompt['trending_score'] = prompt['clicks'] * time_decay
-                
-                break  # Exit loop once found
+                break
         
         # Write back to file
-        f.seek(0)
-        json.dump(prompts, f, indent=4)
-        f.truncate()
+        f.seek(0)  # Move to start
+        json.dump(prompts, f)
+        f.truncate()  # Remove any leftover data
         fcntl.flock(f, fcntl.LOCK_UN)
     
+    # Return the updated prompt
     return getPrompt(id)
 
 def countPrompts():
