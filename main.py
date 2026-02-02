@@ -6,7 +6,6 @@ from flask import abort, redirect, render_template, request, send_from_directory
 from flask_login import current_user, login_user, logout_user
 from flask.cli import AppGroup
 from flask_login import current_user, login_required
-from api.multirating_api import multirating_api
 from flask import current_app
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
@@ -19,8 +18,6 @@ from hacks.prompts import initPrompts
 import jwt 
 # Add this to your main Flask app file (e.g., main.py or app.py)
 # This should be AFTER you set up app.config['DATA_FOLDER']
-
-from hacks.prompts import initPrompts
 
 # ... your other Flask setup code ...
 
@@ -93,7 +90,6 @@ app.register_blueprint(groq_api)
 app.register_blueprint(gemini_api)
 app.register_blueprint(microblog_api)
 app.register_blueprint(performance_api)
-app.register_blueprint(multirating_api)
 
 app.register_blueprint(analytics_api)
 app.register_blueprint(student_api)
