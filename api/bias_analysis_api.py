@@ -241,6 +241,7 @@ ANALYSIS GUIDELINES:
 - Acknowledge their engagement level and effort
 - Be encouraging but honest about areas needing work
 - Make recommendations concrete and achievable
+- Use second-person language ("you", "your") to personalize the analysis
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or additional text."""
 
