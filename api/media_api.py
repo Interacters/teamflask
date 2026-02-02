@@ -259,6 +259,161 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from flask import make_response
+import re
+
+# ===== CITATION QUALITY CHECKER - NEW ADDITION =====
+
+# Credible news sources and their base scores
+CREDIBLE_DOMAINS = {
+    'nytimes.com': 8,
+    'washingtonpost.com': 8,
+    'bbc.com': 9,
+    'bbc.co.uk': 9,
+    'reuters.com': 9,
+    'apnews.com': 9,
+    'associatedpress.org': 9,
+    'npr.org': 8,
+    'pbs.org': 8,
+    'theguardian.com': 8,
+    'wsj.com': 8,
+    'economist.com': 9,
+    'theatlantic.com': 8,
+    'foreignaffairs.com': 9,
+    'nature.com': 10,
+    'science.org': 10,
+    'sciencedirect.com': 10,
+    'jstor.org': 10,
+    'ncbi.nlm.nih.gov': 10,
+    'forbes.com': 7,
+    'bloomberg.com': 8,
+    'politico.com': 7,
+    'time.com': 7,
+    'newsweek.com': 7,
+    'usatoday.com': 7,
+    'cbsnews.com': 7,
+    'abcnews.go.com': 7,
+    'nbcnews.com': 7,
+    'cnn.com': 7,
+    'axios.com': 7,
+    'propublica.org': 9,
+}
+
+# Questionable or low-quality sources
+QUESTIONABLE_DOMAINS = {
+    'dailymail.co.uk': 4,
+    'breitbart.com': 3,
+    'infowars.com': 1,
+    'naturalnews.com': 2,
+    'beforeitsnews.com': 2,
+    'bipartisanreport.com': 3,
+    'occupydemocrats.com': 3,
+    'truthdig.com': 4,
+    'thegatewaypundit.com': 2,
+}
+
+def check_citation_quality(url, author, date, source):
+    """
+    Check the quality of a citation based on multiple factors.
+    Returns a score from 1-10.
+    """
+    score = 5  # baseline score
+    
+    try:
+        # Extract domain from URL
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower().replace('www.', '')
+        
+        # Check against known credible domains
+        if domain in CREDIBLE_DOMAINS:
+            score = CREDIBLE_DOMAINS[domain]
+        # Check against questionable domains
+        elif domain in QUESTIONABLE_DOMAINS:
+            score = QUESTIONABLE_DOMAINS[domain]
+        
+        # Bonus: Check top-level domain
+        if domain.endswith(('.edu', '.gov')):
+            score += 2
+        elif domain.endswith('.org'):
+            score += 1
+        
+        # Bonus: HTTPS connection
+        if parsed.scheme == 'https':
+            score += 1
+        
+        # Bonus: Has author
+        if author and len(str(author).strip()) > 2:
+            score += 1
+        
+        # Bonus: Recent publication date
+        if date:
+            year_match = re.search(r'\b(19|20)\d{2}\b', str(date))
+            if year_match:
+                year = int(year_match.group())
+                current_year = datetime.now().year
+                
+                # Publications from last 5 years
+                if year >= current_year - 5:
+                    score += 2
+                # Publications from last 10 years
+                elif year >= current_year - 10:
+                    score += 1
+        
+        # Cap score between 1 and 10
+        return min(max(score, 1), 10)
+        
+    except Exception as e:
+        print(f"Error checking citation quality: {e}")
+        return 5  # Return baseline if error
+
+@media_api.route('/check_quality', methods=['POST'])
+def check_quality():
+    """
+    Check the quality score of a citation.
+    Expects JSON: { "url": "...", "author": "...", "date": "...", "source": "..." }
+    Returns: { "score": 8, "quality": "high", "message": "..." }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        url = data.get('url', '')
+        author = data.get('author', '')
+        date = data.get('date', '')
+        source = data.get('source', '')
+        
+        if not url:
+            return jsonify({'error': 'URL is required'}), 400
+        
+        # Calculate quality score
+        score = check_citation_quality(url, author, date, source)
+        
+        # Determine quality level and message
+        if score >= 8:
+            quality = 'high'
+            message = 'Highly credible source'
+            color = 'green'
+        elif score >= 6:
+            quality = 'medium'
+            message = 'Moderately credible source'
+            color = 'yellow'
+        else:
+            quality = 'low'
+            message = 'Consider finding a more credible source'
+            color = 'red'
+        
+        return jsonify({
+            'score': score,
+            'quality': quality,
+            'message': message,
+            'color': color
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Error checking quality: {str(e)}'}), 500
+
+# ===== END CITATION QUALITY CHECKER =====
 
 @media_api.route('/fetch_meta')
 def fetch_meta():
