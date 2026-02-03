@@ -261,116 +261,329 @@ from urllib.parse import urljoin, urlparse
 from flask import make_response
 import re
 
-# ===== CITATION QUALITY CHECKER - NEW ADDITION =====
+# ===== ENHANCED CITATION QUALITY CHECKER =====
+# Add these imports at the top of media_api.py
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import re
+from datetime import datetime
 
-# Credible news sources and their base scores
+# Expanded credible domains with more nuance
 CREDIBLE_DOMAINS = {
-    'nytimes.com': 8,
-    'washingtonpost.com': 8,
-    'bbc.com': 9,
-    'bbc.co.uk': 9,
-    'reuters.com': 9,
-    'apnews.com': 9,
-    'associatedpress.org': 9,
-    'npr.org': 8,
-    'pbs.org': 8,
-    'theguardian.com': 8,
-    'wsj.com': 8,
-    'economist.com': 9,
-    'theatlantic.com': 8,
-    'foreignaffairs.com': 9,
+    # Tier 1: Academic & Scientific (9-10)
     'nature.com': 10,
     'science.org': 10,
     'sciencedirect.com': 10,
     'jstor.org': 10,
     'ncbi.nlm.nih.gov': 10,
-    'forbes.com': 7,
-    'bloomberg.com': 8,
-    'politico.com': 7,
-    'time.com': 7,
-    'newsweek.com': 7,
-    'usatoday.com': 7,
+    'pubmed.ncbi.nlm.nih.gov': 10,
+    'arxiv.org': 9,
+    'pnas.org': 10,
+    'thelancet.com': 10,
+    
+    # Tier 2: Major International News (8-9)
+    'bbc.com': 9,
+    'bbc.co.uk': 9,
+    'reuters.com': 9,
+    'apnews.com': 9,
+    'associatedpress.org': 9,
+    'economist.com': 9,
+    'foreignaffairs.com': 9,
+    'propublica.org': 9,
+    
+    # Tier 3: Major US News (7-8)
+    'nytimes.com': 8,
+    'washingtonpost.com': 8,
+    'wsj.com': 8,
+    'npr.org': 8,
+    'pbs.org': 8,
+    'theguardian.com': 8,
+    'theatlantic.com': 8,
+    
+    # Tier 4: Mainstream News (6-7)
+    'cnn.com': 7,
     'cbsnews.com': 7,
     'abcnews.go.com': 7,
     'nbcnews.com': 7,
-    'cnn.com': 7,
+    'usatoday.com': 7,
+    'time.com': 7,
+    'newsweek.com': 7,
     'axios.com': 7,
-    'propublica.org': 9,
+    'politico.com': 7,
+    'bloomberg.com': 8,
+    'forbes.com': 7,
 }
 
 # Questionable or low-quality sources
 QUESTIONABLE_DOMAINS = {
     'dailymail.co.uk': 4,
+    'nypost.com': 5,
     'breitbart.com': 3,
     'infowars.com': 1,
     'naturalnews.com': 2,
     'beforeitsnews.com': 2,
     'bipartisanreport.com': 3,
     'occupydemocrats.com': 3,
-    'truthdig.com': 4,
     'thegatewaypundit.com': 2,
+    'zerohedge.com': 3,
+    'activistpost.com': 3,
 }
 
-def check_citation_quality(url, author, date, source):
+# Educational institutions (automatic boost)
+EDU_KEYWORDS = ['university', 'college', 'institute', 'academia', 'edu']
+
+# Government domains
+GOV_KEYWORDS = ['gov', 'senate', 'congress', 'whitehouse']
+
+# Red flags in URLs/domains
+RED_FLAGS = ['blog', 'wordpress', 'tumblr', 'blogspot', 'medium.com/~']
+
+def check_author_credentials(author, url=None):
     """
-    Check the quality of a citation based on multiple factors.
-    Returns a score from 1-10.
+    Check if author has credentials or appears in the content.
+    Returns score adjustment (-1, 0, +1, +2)
     """
-    score = 5  # baseline score
+    if not author or len(str(author).strip()) < 2:
+        return -1  # No author listed
+    
+    author_clean = str(author).lower().strip()
+    
+    # Check for academic credentials
+    if any(cred in author_clean for cred in ['phd', 'ph.d', 'dr.', 'professor', 'prof.']):
+        return +2
+    
+    # Check for journalistic credentials
+    if any(title in author_clean for title in ['editor', 'correspondent', 'reporter', 'journalist']):
+        return +1
+    
+    # Check if author name looks legitimate (has comma or multiple words)
+    if ',' in author or len(author.split()) >= 2:
+        return +1
+    
+    return 0
+
+def check_url_quality(url):
+    """
+    Analyze URL structure for quality indicators.
+    Returns score adjustment (-2 to +2)
+    """
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        path = parsed.path.lower()
+        
+        score_adj = 0
+        
+        # Check for red flags
+        if any(flag in domain or flag in path for flag in RED_FLAGS):
+            score_adj -= 1
+        
+        # Check for news/article indicators
+        if any(indicator in path for indicator in ['/news/', '/article/', '/story/', '/report/']):
+            score_adj += 1
+        
+        # Check for opinion pieces (slightly lower credibility)
+        if any(opinion in path for opinion in ['/opinion/', '/blog/', '/editorial/']):
+            score_adj -= 1
+        
+        # Check for specific content types
+        if '/press-release/' in path or '/pr/' in path:
+            score_adj -= 1
+        
+        # Academic papers
+        if any(academic in path for academic in ['/journal/', '/paper/', '/article/', '/doi/']):
+            score_adj += 1
+        
+        return score_adj
+        
+    except Exception:
+        return 0
+
+def check_date_recency(date_str):
+    """
+    More nuanced date checking.
+    Returns score adjustment (0 to +3)
+    """
+    if not date_str:
+        return 0
     
     try:
-        # Extract domain from URL
+        # Extract year
+        year_match = re.search(r'\b(19|20)\d{2}\b', str(date_str))
+        if not year_match:
+            return 0
+        
+        year = int(year_match.group())
+        current_year = datetime.now().year
+        age = current_year - year
+        
+        # Very recent (last 2 years)
+        if age <= 2:
+            return +3
+        # Recent (3-5 years)
+        elif age <= 5:
+            return +2
+        # Somewhat recent (6-10 years)
+        elif age <= 10:
+            return +1
+        # Old but potentially still relevant (11-15 years)
+        elif age <= 15:
+            return 0
+        # Very old (15+ years) - context matters
+        else:
+            return -1
+            
+    except Exception:
+        return 0
+
+def fetch_page_indicators(url):
+    """
+    Fetch the actual page and look for quality indicators.
+    Returns dict with various quality signals.
+    """
+    indicators = {
+        'has_citations': False,
+        'has_byline': False,
+        'word_count': 0,
+        'has_sources': False,
+        'professional_layout': False
+    }
+    
+    try:
+        # Only fetch if it's a credible domain (avoid wasting time on junk)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Check for citations/references
+            if soup.find(['cite', 'sup']) or soup.find(class_=re.compile(r'citation|reference|source', re.I)):
+                indicators['has_citations'] = True
+            
+            # Check for byline
+            if soup.find(class_=re.compile(r'byline|author', re.I)):
+                indicators['has_byline'] = True
+            
+            # Estimate word count (content quality)
+            text = soup.get_text()
+            word_count = len(text.split())
+            indicators['word_count'] = word_count
+            
+            # Look for source mentions
+            if re.search(r'according to|sources say|cited|reported by', text, re.I):
+                indicators['has_sources'] = True
+                
+    except Exception as e:
+        print(f"Could not fetch page indicators: {e}")
+    
+    return indicators
+
+def check_citation_quality_enhanced(url, author, date, source, fetch_page=False):
+    """
+    Enhanced quality checking with multiple factors.
+    Returns score from 1-10 with detailed reasoning.
+    """
+    score = 5  # baseline
+    reasons = []
+    
+    try:
+        # Parse URL
         parsed = urlparse(url)
         domain = parsed.netloc.lower().replace('www.', '')
         
-        # Check against known credible domains
+        # 1. Domain reputation (primary factor)
         if domain in CREDIBLE_DOMAINS:
             score = CREDIBLE_DOMAINS[domain]
-        # Check against questionable domains
+            reasons.append(f"Known credible source ({CREDIBLE_DOMAINS[domain]}/10 base)")
         elif domain in QUESTIONABLE_DOMAINS:
             score = QUESTIONABLE_DOMAINS[domain]
+            reasons.append(f"Known questionable source ({QUESTIONABLE_DOMAINS[domain]}/10 base)")
+        else:
+            reasons.append("Unknown domain (5/10 base)")
         
-        # Bonus: Check top-level domain
-        if domain.endswith(('.edu', '.gov')):
-            score += 2
+        # 2. TLD bonuses
+        if domain.endswith(('.edu', '.ac.uk', '.edu.au')):
+            adj = +2
+            score += adj
+            reasons.append(f"Educational institution (+{adj})")
+        elif domain.endswith(('.gov', '.gov.uk')):
+            adj = +2
+            score += adj
+            reasons.append(f"Government source (+{adj})")
         elif domain.endswith('.org'):
-            score += 1
+            # .org is mixed - check if it's a known credible org
+            if domain not in CREDIBLE_DOMAINS:
+                adj = +1
+                score += adj
+                reasons.append(f"Non-profit organization (+{adj})")
         
-        # Bonus: HTTPS connection
+        # 3. HTTPS
         if parsed.scheme == 'https':
-            score += 1
+            adj = +1
+            score += adj
+            reasons.append(f"Secure connection (+{adj})")
         
-        # Bonus: Has author
-        if author and len(str(author).strip()) > 2:
-            score += 1
+        # 4. Author credentials
+        author_adj = check_author_credentials(author, url)
+        if author_adj != 0:
+            score += author_adj
+            if author_adj > 0:
+                reasons.append(f"Author credentials (+{author_adj})")
+            else:
+                reasons.append(f"No author listed ({author_adj})")
         
-        # Bonus: Recent publication date
-        if date:
-            year_match = re.search(r'\b(19|20)\d{2}\b', str(date))
-            if year_match:
-                year = int(year_match.group())
-                current_year = datetime.now().year
-                
-                # Publications from last 5 years
-                if year >= current_year - 5:
-                    score += 2
-                # Publications from last 10 years
-                elif year >= current_year - 10:
-                    score += 1
+        # 5. URL structure
+        url_adj = check_url_quality(url)
+        if url_adj != 0:
+            score += url_adj
+            reasons.append(f"URL quality ({url_adj:+d})")
         
-        # Cap score between 1 and 10
-        return min(max(score, 1), 10)
+        # 6. Date recency
+        date_adj = check_date_recency(date)
+        if date_adj != 0:
+            score += date_adj
+            if date_adj > 0:
+                reasons.append(f"Recent publication (+{date_adj})")
+            else:
+                reasons.append(f"Outdated content ({date_adj})")
+        
+        # 7. Optional: Fetch page for deeper analysis
+        if fetch_page and score >= 5:  # Only for decent sources
+            indicators = fetch_page_indicators(url)
+            
+            if indicators['has_citations']:
+                score += 1
+                reasons.append("Contains citations (+1)")
+            
+            if indicators['word_count'] > 500:
+                score += 1
+                reasons.append("Substantial content (+1)")
+        
+        # Cap between 1-10
+        final_score = min(max(score, 1), 10)
+        
+        return {
+            'score': final_score,
+            'reasons': reasons,
+            'raw_score': score
+        }
         
     except Exception as e:
-        print(f"Error checking citation quality: {e}")
-        return 5  # Return baseline if error
+        print(f"Error in quality check: {e}")
+        return {
+            'score': 5,
+            'reasons': ['Error during analysis'],
+            'raw_score': 5
+        }
 
 @media_api.route('/check_quality', methods=['POST'])
 def check_quality():
     """
-    Check the quality score of a citation.
-    Expects JSON: { "url": "...", "author": "...", "date": "...", "source": "..." }
-    Returns: { "score": 8, "quality": "high", "message": "..." }
+    Enhanced quality checker endpoint.
+    Expects: { "url": "...", "author": "...", "date": "...", "source": "...", "deep_check": false }
+    Returns: { "score": 8, "quality": "high", "message": "...", "reasons": [...] }
     """
     try:
         data = request.get_json()
@@ -382,38 +595,63 @@ def check_quality():
         author = data.get('author', '')
         date = data.get('date', '')
         source = data.get('source', '')
+        deep_check = data.get('deep_check', False)  # Optional: slower but more thorough
         
         if not url:
             return jsonify({'error': 'URL is required'}), 400
         
-        # Calculate quality score
-        score = check_citation_quality(url, author, date, source)
+        # Calculate enhanced quality score
+        result = check_citation_quality_enhanced(url, author, date, source, fetch_page=deep_check)
+        score = result['score']
         
         # Determine quality level and message
         if score >= 8:
             quality = 'high'
             message = 'Highly credible source'
-            color = 'green'
         elif score >= 6:
             quality = 'medium'
             message = 'Moderately credible source'
-            color = 'yellow'
         else:
             quality = 'low'
             message = 'Consider finding a more credible source'
-            color = 'red'
         
         return jsonify({
             'score': score,
             'quality': quality,
             'message': message,
-            'color': color
+            'reasons': result['reasons'],  # NEW: detailed reasoning
+            'details': {
+                'author_present': bool(author and len(author.strip()) > 2),
+                'date_present': bool(date),
+                'https': url.startswith('https://'),
+                'raw_score': result['raw_score']
+            }
         }), 200
         
     except Exception as e:
         return jsonify({'error': f'Error checking quality: {str(e)}'}), 500
 
-# ===== END CITATION QUALITY CHECKER =====
+# ===== USAGE EXAMPLE =====
+"""
+# Basic check (fast)
+POST /api/media/check_quality
+{
+    "url": "https://www.nature.com/articles/12345",
+    "author": "Dr. Smith, PhD",
+    "date": "2024",
+    "source": "Nature"
+}
+
+# Deep check (slower, fetches page)
+POST /api/media/check_quality
+{
+    "url": "https://example.com/article",
+    "author": "John Doe",
+    "date": "2023",
+    "source": "Example News",
+    "deep_check": true
+}
+"""
 
 @media_api.route('/fetch_meta')
 def fetch_meta():
