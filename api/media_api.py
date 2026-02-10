@@ -578,27 +578,37 @@ def check_citation_quality_enhanced(url, author, date, source, fetch_page=False)
             'raw_score': 5
         }
 
-@media_api.route('/check_quality', methods=['POST'])
+@media_api.route('/check_quality', methods=['POST', 'OPTIONS'])  # Add OPTIONS
 def check_quality():
     """
     Enhanced quality checker endpoint.
-    Expects: { "url": "...", "author": "...", "date": "...", "source": "...", "deep_check": false }
-    Returns: { "score": 8, "quality": "high", "message": "...", "reasons": [...] }
     """
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        resp = make_response('', 204)
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return resp
+    
     try:
         data = request.get_json()
         
         if not data:
-            return jsonify({'error': 'Request body is required'}), 400
+            resp = make_response(jsonify({'error': 'Request body is required'}), 400)
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
         
         url = data.get('url', '')
         author = data.get('author', '')
         date = data.get('date', '')
         source = data.get('source', '')
-        deep_check = data.get('deep_check', False)  # Optional: slower but more thorough
+        deep_check = data.get('deep_check', False)
         
         if not url:
-            return jsonify({'error': 'URL is required'}), 400
+            resp = make_response(jsonify({'error': 'URL is required'}), 400)
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
         
         # Calculate enhanced quality score
         result = check_citation_quality_enhanced(url, author, date, source, fetch_page=deep_check)
@@ -615,21 +625,27 @@ def check_quality():
             quality = 'low'
             message = 'Consider finding a more credible source'
         
-        return jsonify({
+        # Create response with CORS headers
+        resp = make_response(jsonify({
             'score': score,
             'quality': quality,
             'message': message,
-            'reasons': result['reasons'],  # NEW: detailed reasoning
+            'reasons': result['reasons'],
             'details': {
                 'author_present': bool(author and len(author.strip()) > 2),
                 'date_present': bool(date),
                 'https': url.startswith('https://'),
                 'raw_score': result['raw_score']
             }
-        }), 200
+        }), 200)
+        
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
         
     except Exception as e:
-        return jsonify({'error': f'Error checking quality: {str(e)}'}), 500
+        resp = make_response(jsonify({'error': f'Error checking quality: {str(e)}'}), 500)
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
 
 # ===== USAGE EXAMPLE =====
 """
