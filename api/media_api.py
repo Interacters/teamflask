@@ -659,7 +659,6 @@ def fetch_meta():
     return resp
 
 # Register endpoints
-api.add_resource(MediaPersonAPI, '/person/get')  # POST to register, GET with ?name=X to retrieve
 api.add_resource(MediaScoreAPI, 
                  '/score',  # POST with JSON body
                  '/score/<string:username>/<int:time>')  # POST with path params
